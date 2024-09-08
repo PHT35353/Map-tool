@@ -68,15 +68,16 @@ if len(st.session_state['all_clicks']) > 0:
 # Display the map and capture user interaction (click, move, zoom)
 location_data = st_folium(m, height=500, width=700)
 
-# If the map has moved or zoomed, update the session state
-if location_data and location_data.get('center') and location_data.get('zoom'):
-    new_center = [location_data['center']['lat'], location_data['center']['lng']]
-    new_zoom = location_data['zoom']
+# Capture user interaction only after the map has been moved or zoomed
+if location_data:
+    if 'center' in location_data and 'zoom' in location_data:
+        new_center = [location_data['center']['lat'], location_data['center']['lng']]
+        new_zoom = location_data['zoom']
 
-    # Only update session state if the map's center or zoom has changed
-    if new_center != st.session_state['map_center'] or new_zoom != st.session_state['map_zoom']:
-        st.session_state['map_center'] = new_center
-        st.session_state['map_zoom'] = new_zoom
+        # Update session state only if the center or zoom has changed
+        if new_center != st.session_state['map_center'] or new_zoom != st.session_state['map_zoom']:
+            st.session_state['map_center'] = new_center
+            st.session_state['map_zoom'] = new_zoom
 
 # If a new point is clicked, capture it and add to session state
 if location_data and location_data.get('last_clicked'):
