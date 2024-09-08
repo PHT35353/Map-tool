@@ -89,16 +89,16 @@ if location_data and location_data.get('last_clicked') is not None:
         # Store the clicked location in session state
         st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
         
-        # Update the map center and zoom only when a point is clicked
+        # Update the map center only when a point is clicked
         st.session_state['map_center'] = [lat_lng['lat'], lat_lng['lng']]
-        st.session_state['map_zoom'] = location_data.get('zoom', st.session_state['map_zoom'])
         
         # Redraw the map with updated markers and lines
         distances = calculate_geodesic_distance(st.session_state['all_clicks'])
         draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
 
-# Capture the current map zoom level without forcing the map to center during zoom/pan
-if location_data and 'zoom' in location_data:
+# Capture zoom and center updates only during map movement (ignore unless there's a click)
+if location_data and 'center' in location_data and 'zoom' in location_data:
+    # Save the current map state
     st.session_state['map_zoom'] = location_data['zoom']
 
 # Show the selected points in the sidebar
