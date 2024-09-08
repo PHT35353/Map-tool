@@ -92,8 +92,8 @@ if lat and lng:
         st.warning("Please enter valid numeric coordinates for both latitude and longitude.")
 
 # Adjust map size based on whether it's in fullscreen mode
-map_height = 500 if not st.session_state['fullscreen'] else 900  # Increase height to fill screen
-map_width = 700 if not st.session_state['fullscreen'] else 1400  # Increase width to fill screen
+map_height = 500 if not st.session_state['fullscreen'] else 800  # Increase height to a reasonable large size
+map_width = 700 if not st.session_state['fullscreen'] else 1200  # Increase width to a reasonable large size
 
 # Initialize the map with stored center and zoom
 m = initialize_map(st.session_state['map_center'], st.session_state['map_zoom'])
