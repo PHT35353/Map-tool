@@ -9,6 +9,30 @@ st.title("Accurate Distance Calculator Using Leaflet and Geodesic Distance")
 # Sidebar for displaying information and actions
 st.sidebar.title("Selected Points & Distances")
 
+# Function to map hex color to a Folium-compatible color
+def map_color_to_folium(hex_color):
+    folium_color_map = {
+        '#ff0000': 'red',
+        '#3186cc': 'blue',
+        '#008000': 'green',
+        '#800080': 'purple',
+        '#ffa500': 'orange',
+        '#8b0000': 'darkred',
+        '#ff4500': 'lightred',
+        '#f5f5dc': 'beige',
+        '#00008b': 'darkblue',
+        '#006400': 'darkgreen',
+        '#5f9ea0': 'cadetblue',
+        '#90ee90': 'lightgreen',
+        '#add8e6': 'lightblue',
+        '#ff69b4': 'pink',
+        '#d3d3d3': 'lightgray',
+        '#000000': 'black',
+        '#808080': 'gray'
+    }
+    # Return the closest available Folium color or default to red
+    return folium_color_map.get(hex_color.lower(), 'red')
+
 # Initialize a new map with dynamic center and zoom
 def initialize_map(center, zoom):
     return folium.Map(location=center, zoom_start=zoom)
@@ -26,9 +50,11 @@ def draw_lines_and_markers(map_obj, locations, lines_to_remove):
     distances = []
     # Add markers (dots) for each clicked point
     for i, point in enumerate(locations):
-        folium.Marker([point['lat'], point['lng']], 
-                      popup=f"{point['name']}", 
-                      icon=folium.Icon(color=point['color'])).add_to(map_obj)
+        folium.Marker(
+            [point['lat'], point['lng']],
+            popup=f"{point['name']}",
+            icon=folium.Icon(color=map_color_to_folium(point['color']))
+        ).add_to(map_obj)
     
     # Draw lines between every pair of points and calculate distances
     if len(locations) > 1:
@@ -52,9 +78,10 @@ def draw_lines_and_markers(map_obj, locations, lines_to_remove):
                 
                 # Show distance at the midpoint of the line
                 midpoint = [(point1['lat'] + point2['lat']) / 2, (point1['lng'] + point2['lng']) / 2]
-                folium.Marker(midpoint, 
-                              icon=folium.DivIcon(html=f"<div style='font-size: 12px; color: black;'>{distance}</div>")
-                             ).add_to(map_obj)
+                folium.Marker(
+                    midpoint,
+                    icon=folium.DivIcon(html=f"<div style='font-size: 12px; color: black;'>{distance}</div>")
+                ).add_to(map_obj)
     
     return distances
 
@@ -136,7 +163,7 @@ if location_data and 'center' in location_data and 'zoom' in location_data:
 # Sidebar section for removing points
 if len(st.session_state['all_clicks']) > 0:
     st.sidebar.subheader("Selected Points:")
-    for i, point in enumerate(st.session_state['all_clicks'], start=0):
+    for i, point in enumerate(st.session_state['all_clicks'], start=1):
         col1, col2 = st.sidebar.columns([3, 1])
         col1.markdown(f"**{point['name']}:** ({point['lat']:.5f}, {point['lng']:.5f})")
         
