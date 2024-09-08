@@ -34,6 +34,8 @@ def draw_lines_and_markers(map_obj, locations, distances):
     for i in range(1, len(locations)):
         point1 = locations[i-1]
         point2 = locations[i]
+        
+        # Add markers (dots) at clicked points
         folium.Marker([point1['lat'], point1['lng']], popup=f"Point {i}").add_to(map_obj)
         folium.Marker([point2['lat'], point2['lng']], popup=f"Point {i+1}").add_to(map_obj)
         
