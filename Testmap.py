@@ -26,13 +26,17 @@ def draw_lines_and_markers(map_obj, locations, lines_to_remove):
     distances = []
     # Add circle markers (dots) for each clicked point using custom colors
     for i, point in enumerate(locations):
+        # Ensure the hex color is formatted properly and strip any extra spaces
+        point_color = point['color'].strip()
+        st.write(f"Color for point {i+1}: {point_color}")  # Debugging log
+        
         folium.CircleMarker(
             location=[point['lat'], point['lng']],
             radius=10,
             popup=f"{point['name']}",
-            color=point['color'],  # Border color
+            color=point_color,  # Border color
             fill=True,
-            fill_color=point['color'],  # Fill color
+            fill_color=point_color,  # Fill color
             fill_opacity=0.9
         ).add_to(map_obj)
     
