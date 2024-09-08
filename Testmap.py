@@ -96,9 +96,10 @@ if location_data and location_data.get('last_clicked') is not None:
         distances = calculate_geodesic_distance(st.session_state['all_clicks'])
         draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
 
-# Capture zoom and center updates only during map movement (ignore unless there's a click)
+# Capture the current map zoom and center after zooming/panning
 if location_data and 'center' in location_data and 'zoom' in location_data:
-    # Save the current map state
+    # Save the current center and zoom after map interaction
+    st.session_state['map_center'] = [location_data['center']['lat'], location_data['center']['lng']]
     st.session_state['map_zoom'] = location_data['zoom']
 
 # Show the selected points in the sidebar
