@@ -63,11 +63,13 @@ if location_data:
     if location_data['last_clicked'] is not None:
         lat_lng = location_data['last_clicked']
         
-        # Only register the click if it's within the map bounds (and not a zoom action)
-        if location_data['map_bounds']['south'] < lat_lng['lat'] < location_data['map_bounds']['north'] and \
-           location_data['map_bounds']['west'] < lat_lng['lng'] < location_data['map_bounds']['east']:
-            st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
-            notify_click(lat_lng)
+        # Safeguard to check if 'map_bounds' exists
+        if 'map_bounds' in location_data:
+            # Only register the click if it's within the map bounds (and not a zoom action)
+            if location_data['map_bounds']['south'] < lat_lng['lat'] < location_data['map_bounds']['north'] and \
+               location_data['map_bounds']['west'] < lat_lng['lng'] < location_data['map_bounds']['east']:
+                st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
+                notify_click(lat_lng)
 
     # Show the selected points in the sidebar
     if len(st.session_state['all_clicks']) > 0:
