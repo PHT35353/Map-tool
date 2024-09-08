@@ -13,9 +13,8 @@ st.sidebar.title("Selected Points & Distances")
 st.markdown(
     """
     <style>
-    .small-button {
+    .small-button .stButton button {
         font-size: 12px !important;
-        text-align: center;
     }
     </style>
     """, unsafe_allow_html=True
@@ -161,8 +160,8 @@ if len(st.session_state['all_clicks']) > 0:
         col1, col2 = st.sidebar.columns([3, 1])
         col1.markdown(f"**{point['name']}:** ({point['lat']:.5f}, {point['lng']:.5f})")
         
-        # Add a "Remove" button next to each point, styled using CSS
-        if col2.markdown(f'<button class="small-button">Remove Point {i}</button>', unsafe_allow_html=True):
+        # Add a "Remove" button next to each point with custom styling
+        if col2.button(f"Remove Point {i}", key=f"remove_{i}"):
             # Ensure valid index range for removal
             if 0 <= i < len(st.session_state['all_clicks']):
                 # Remove the point from the list
