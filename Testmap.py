@@ -13,20 +13,7 @@ st.sidebar.title("Selected Points & Distances")
 st.markdown(
     """
     <style>
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 14px;
-        margin: 4px 2px;
-        cursor: pointer;
-        border-radius: 12px;
-    }
-    .small-button {
+    .small-button .stButton button {
         font-size: 12px !important;
     }
     </style>
@@ -124,7 +111,7 @@ if lat and lng:
 
 # Set a fixed map size (no enlarging feature)
 map_height = 500
-map_width = 1000
+map_width = 700
 
 # Initialize the map with stored center and zoom
 m = initialize_map(st.session_state['map_center'], st.session_state['map_zoom'])
@@ -173,7 +160,7 @@ if len(st.session_state['all_clicks']) > 0:
         col1, col2 = st.sidebar.columns([3, 1])
         col1.markdown(f"**{point['name']}:** ({point['lat']:.5f}, {point['lng']:.5f})")
         
-        # Add a "Remove" button using Streamlit's built-in button functionality, with improved styling
+        # Add a "Remove" button next to each point with custom styling
         if col2.button(f"Remove Point {i}", key=f"remove_{i}"):
             # Ensure valid index range for removal
             if 0 <= i < len(st.session_state['all_clicks']):
