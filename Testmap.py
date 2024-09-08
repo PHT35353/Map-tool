@@ -67,11 +67,11 @@ if 'all_clicks' not in st.session_state:
 if 'removed_lines' not in st.session_state:
     st.session_state['removed_lines'] = set()  # Set of tuples (i, j) for lines removed
 
-# Set initial map state (center and zoom)
+# Set initial map state (center and zoom) for the Netherlands
 if 'map_center' not in st.session_state:
-    st.session_state['map_center'] = [52.52, 13.405]  # Initial center (Berlin)
+    st.session_state['map_center'] = [52.1, 5.3]  # Center the map in the Netherlands
 if 'map_zoom' not in st.session_state:
-    st.session_state['map_zoom'] = 10  # Initial zoom level
+    st.session_state['map_zoom'] = 7  # Initial zoom level suitable for the Netherlands
 
 # Initialize the map with stored center and zoom
 m = initialize_map(st.session_state['map_center'], st.session_state['map_zoom'])
