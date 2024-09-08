@@ -18,7 +18,7 @@ def calculate_geodesic_distance(locations):
     distances = []
     for i in range(1, len(locations)):
         coords_1 = (locations[i-1]['lat'], locations[i-1]['lng'])
-        coords_2 = (locations[i]['lat'], coords_2)
+        coords_2 = (locations[i]['lat'], locations[i]['lng'])  # Fixed line
         distance_km = geodesic(coords_1, coords_2).kilometers
         if distance_km < 1:
             distance = f"{distance_km * 1000:.2f} meters"
