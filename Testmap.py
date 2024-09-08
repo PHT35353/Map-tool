@@ -9,9 +9,9 @@ st.title("Accurate Distance Calculator Using Leaflet and Geodesic Distance")
 # Sidebar for displaying information and actions
 st.sidebar.title("Selected Points & Distances")
 
-# Initialize a new map with a center point (Berlin)
-def initialize_map():
-    return folium.Map(location=[52.52, 13.405], zoom_start=10)
+# Initialize a new map with dynamic center and zoom
+def initialize_map(center, zoom):
+    return folium.Map(location=center, zoom_start=zoom)
 
 # Function to calculate accurate geodesic distance
 def calculate_geodesic_distance(locations):
@@ -50,22 +50,28 @@ def draw_lines_and_markers(map_obj, locations, distances):
                           icon=folium.DivIcon(html=f"<div style='font-size: 12px; color: black;'>{distances[i-1]}</div>")
                          ).add_to(map_obj)
 
-# Store session state for previous clicks
+# Store session state for previous clicks, center, and zoom
 if 'last_clicked_coords' not in st.session_state:
     st.session_state['last_clicked_coords'] = None  # To track the last click coordinates
 
 if 'all_clicks' not in st.session_state:
     st.session_state['all_clicks'] = []  # To track all clicked points
 
-# Re-initialize the map (to ensure persistence of markers and lines)
-m = initialize_map()
+# Set initial map state (center and zoom)
+if 'map_center' not in st.session_state:
+    st.session_state['map_center'] = [52.52, 13.405]  # Initial center (Berlin)
+if 'map_zoom' not in st.session_state:
+    st.session_state['map_zoom'] = 10  # Initial zoom level
+
+# Initialize the map with stored center and zoom
+m = initialize_map(st.session_state['map_center'], st.session_state['map_zoom'])
 
 # Draw markers and lines from previous clicks
 if len(st.session_state['all_clicks']) > 0:
     distances = calculate_geodesic_distance(st.session_state['all_clicks'])
     draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
 
-# Collect map data (user clicks)
+# Collect map data (user clicks and map movements)
 location_data = st_folium(m, height=500, width=700)
 
 # Process new clicks on the map
@@ -87,6 +93,14 @@ if location_data and location_data.get('last_clicked') is not None:
         if len(st.session_state['all_clicks']) >= 2:
             distances = calculate_geodesic_distance(st.session_state['all_clicks'])
             draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
+
+# Capture the current map center and zoom level
+if location_data and location_data.get('bounds') is not None:
+    bounds = location_data['bounds']
+    new_center_lat = (bounds['north'] + bounds['south']) / 2
+    new_center_lng = (bounds['east'] + bounds['west']) / 2
+    st.session_state['map_center'] = [new_center_lat, new_center_lng]
+    st.session_state['map_zoom'] = location_data.get('zoom', st.session_state['map_zoom'])
 
 # Show the selected points in the sidebar
 if len(st.session_state['all_clicks']) > 0:
