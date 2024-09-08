@@ -104,11 +104,21 @@ if location_data and 'center' in location_data and 'zoom' in location_data:
     st.session_state['map_center'] = [location_data['center']['lat'], location_data['center']['lng']]
     st.session_state['map_zoom'] = location_data['zoom']
 
-# Show the selected points in the sidebar
+# Sidebar section for removing points
 if len(st.session_state['all_clicks']) > 0:
     st.sidebar.subheader("Selected Points:")
     for i, point in enumerate(st.session_state['all_clicks'], start=1):
-        st.sidebar.markdown(f"**Point {i}:** ({point['lat']:.5f}, {point['lng']:.5f})")
+        col1, col2 = st.sidebar.columns([3, 1])
+        col1.markdown(f"**Point {i}:** ({point['lat']:.5f}, {point['lng']:.5f})")
+        
+        # Add a "Remove" button next to each point
+        if col2.button(f"Remove Point {i}", key=f"remove_{i}"):
+            # Remove the point from the list
+            st.session_state['all_clicks'].pop(i)
+            
+            # Re-render the map and sidebar without the removed point
+            distances_in_sidebar = draw_lines_and_markers(m, st.session_state['all_clicks'])
+            break  # Break the loop to prevent issues with rendering the sidebar mid-change
 
 # Display the distances between all points in the sidebar
 if distances_in_sidebar:
@@ -117,7 +127,7 @@ if distances_in_sidebar:
         st.sidebar.markdown(distance_info)
 
 # Clear Points button in the sidebar
-if st.sidebar.button("Clear Points"):
+if st.sidebar.button("Clear All Points"):
     st.session_state['all_clicks'] = []
     st.session_state['last_clicked_coords'] = None
-    st.sidebar.write("Points cleared. Select new locations.")
+    st.sidebar.write("All points cleared. Select new locations.")
