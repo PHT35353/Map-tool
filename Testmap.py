@@ -110,11 +110,17 @@ if len(st.session_state['all_clicks']) > 0:
 # Collect map data (user clicks and map movements)
 location_data = st_folium(m, height=map_height, width=map_width)
 
-# Update session state only when the user moves or zooms the map
+# Capture map movements and zooms
 if location_data:
+    # Only update the center and zoom in session state if the map was moved or zoomed
     if 'center' in location_data and 'zoom' in location_data:
-        st.session_state['map_center'] = [location_data['center']['lat'], location_data['center']['lng']]
-        st.session_state['map_zoom'] = location_data['zoom']
+        new_center = [location_data['center']['lat'], location_data['center']['lng']]
+        new_zoom = location_data['zoom']
+
+        # Only update session state if there's an actual change
+        if new_center != st.session_state['map_center'] or new_zoom != st.session_state['map_zoom']:
+            st.session_state['map_center'] = new_center
+            st.session_state['map_zoom'] = new_zoom
 
 # Sidebar section for adding names and colors to each point
 if location_data and location_data.get('last_clicked') is not None:
