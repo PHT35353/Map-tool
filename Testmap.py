@@ -13,20 +13,7 @@ st.sidebar.title("Selected Points & Distances")
 st.markdown(
     """
     <style>
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 14px;
-        margin: 4px 2px;
-        cursor: pointer;
-        border-radius: 12px;
-    }
-    .small-button {
+    .small-button .stButton button {
         font-size: 12px !important;
     }
     </style>
@@ -108,20 +95,6 @@ if 'map_center' not in st.session_state:
 if 'map_zoom' not in st.session_state:
     st.session_state['map_zoom'] = 7  # Initial zoom level suitable for the Netherlands
 
-# Latitude and Longitude search in the sidebar
-st.sidebar.subheader("Search by Coordinates")
-lat = st.sidebar.text_input("Enter Latitude", "")
-lng = st.sidebar.text_input("Enter Longitude", "")
-
-# If both latitude and longitude are provided, update the map center
-if lat and lng:
-    try:
-        lat, lng = float(lat), float(lng)
-        st.session_state['map_center'] = [lat, lng]
-        st.session_state['map_zoom'] = 14  # Zoom in to show the location clearly
-    except ValueError:
-        st.warning("Please enter valid numeric coordinates for both latitude and longitude.")
-
 # Set a fixed map size (no enlarging feature)
 map_height = 500
 map_width = 700
@@ -137,11 +110,11 @@ if len(st.session_state['all_clicks']) > 0:
 # Collect map data (user clicks and map movements)
 location_data = st_folium(m, height=map_height, width=map_width)
 
-# Only update the session state when the user interacts with the map (moves or zooms)
-if location_data and location_data.get('center') and location_data.get('zoom'):
-    # Update the session state with the current center and zoom only when they change
-    st.session_state['map_center'] = [location_data['center']['lat'], location_data['center']['lng']]
-    st.session_state['map_zoom'] = location_data['zoom']
+# Update session state only when the user moves or zooms the map
+if location_data:
+    if 'center' in location_data and 'zoom' in location_data:
+        st.session_state['map_center'] = [location_data['center']['lat'], location_data['center']['lng']]
+        st.session_state['map_zoom'] = location_data['zoom']
 
 # Sidebar section for adding names and colors to each point
 if location_data and location_data.get('last_clicked') is not None:
@@ -160,6 +133,9 @@ if location_data and location_data.get('last_clicked') is not None:
             'color': point_color
         })
         
+        # Update the map center only when a point is clicked
+        st.session_state['map_center'] = [lat_lng['lat'], lat_lng['lng']]
+        
         # Redraw the map with updated markers and lines, and collect distances
         distances_in_sidebar = draw_lines_and_markers(m, st.session_state['all_clicks'], st.session_state['removed_lines'])
 
@@ -170,7 +146,7 @@ if len(st.session_state['all_clicks']) > 0:
         col1, col2 = st.sidebar.columns([3, 1])
         col1.markdown(f"**{point['name']}:** ({point['lat']:.5f}, {point['lng']:.5f})")
         
-        # Add a "Remove" button using Streamlit's built-in button functionality, with improved styling
+        # Add a "Remove" button next to each point with custom styling
         if col2.button(f"Remove Point {i}", key=f"remove_{i}"):
             # Ensure valid index range for removal
             if 0 <= i < len(st.session_state['all_clicks']):
