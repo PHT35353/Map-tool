@@ -9,30 +9,6 @@ st.title("Accurate Distance Calculator Using Leaflet and Geodesic Distance")
 # Sidebar for displaying information and actions
 st.sidebar.title("Selected Points & Distances")
 
-# Function to map hex color to a Folium-compatible color
-def map_color_to_folium(hex_color):
-    folium_color_map = {
-        '#ff0000': 'red',
-        '#3186cc': 'blue',
-        '#008000': 'green',
-        '#800080': 'purple',
-        '#ffa500': 'orange',
-        '#8b0000': 'darkred',
-        '#ff4500': 'lightred',
-        '#f5f5dc': 'beige',
-        '#00008b': 'darkblue',
-        '#006400': 'darkgreen',
-        '#5f9ea0': 'cadetblue',
-        '#90ee90': 'lightgreen',
-        '#add8e6': 'lightblue',
-        '#ff69b4': 'pink',
-        '#d3d3d3': 'lightgray',
-        '#000000': 'black',
-        '#808080': 'gray'
-    }
-    # Return the closest available Folium color or default to red
-    return folium_color_map.get(hex_color.lower(), 'red')
-
 # Initialize a new map with dynamic center and zoom
 def initialize_map(center, zoom):
     return folium.Map(location=center, zoom_start=zoom)
@@ -48,12 +24,16 @@ def calculate_distance(coords_1, coords_2):
 # Add markers and lines to the map
 def draw_lines_and_markers(map_obj, locations, lines_to_remove):
     distances = []
-    # Add markers (dots) for each clicked point
+    # Add circle markers (dots) for each clicked point using custom colors
     for i, point in enumerate(locations):
-        folium.Marker(
-            [point['lat'], point['lng']],
+        folium.CircleMarker(
+            location=[point['lat'], point['lng']],
+            radius=10,
             popup=f"{point['name']}",
-            icon=folium.Icon(color=map_color_to_folium(point['color']))
+            color=point['color'],  # Border color
+            fill=True,
+            fill_color=point['color'],  # Fill color
+            fill_opacity=0.9
         ).add_to(map_obj)
     
     # Draw lines between every pair of points and calculate distances
