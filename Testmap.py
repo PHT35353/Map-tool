@@ -124,7 +124,7 @@ if lat and lng:
 
 # Set a fixed map size (no enlarging feature)
 map_height = 1000
-map_width = 1000
+map_width = 2000
 
 # Initialize the map with stored center and zoom
 m = initialize_map(st.session_state['map_center'], st.session_state['map_zoom'])
