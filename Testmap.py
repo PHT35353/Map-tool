@@ -123,8 +123,8 @@ if lat and lng:
         st.warning("Please enter valid numeric coordinates for both latitude and longitude.")
 
 # Set a fixed map size (no enlarging feature)
-map_height = 1000
-map_width = 2000
+map_height = 700
+map_width = 700
 
 # Initialize the map with stored center and zoom
 m = initialize_map(st.session_state['map_center'], st.session_state['map_zoom'])
