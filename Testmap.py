@@ -54,22 +54,22 @@ def notify_click(point):
 # Collect map data
 location_data = st_folium(m, height=500, width=700)
 
+# Debug output for location data
+st.write("Location Data:", location_data)
+
 # Store clicks in session state
 if 'all_clicks' not in st.session_state:
     st.session_state['all_clicks'] = []
 
 # Only process map clicks, not map movement (zoom)
 if location_data:
-    if location_data['last_clicked'] is not None:
+    if location_data.get('last_clicked') is not None:
         lat_lng = location_data['last_clicked']
+        st.write("Last clicked location:", lat_lng)  # Debug message
         
-        # Safeguard to check if 'map_bounds' exists
-        if 'map_bounds' in location_data:
-            # Only register the click if it's within the map bounds (and not a zoom action)
-            if location_data['map_bounds']['south'] < lat_lng['lat'] < location_data['map_bounds']['north'] and \
-               location_data['map_bounds']['west'] < lat_lng['lng'] < location_data['map_bounds']['east']:
-                st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
-                notify_click(lat_lng)
+        # Store the clicked location
+        st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
+        notify_click(lat_lng)
 
     # Show the selected points in the sidebar
     if len(st.session_state['all_clicks']) > 0:
