@@ -90,9 +90,8 @@ if location_data and location_data.get('last_clicked') is not None:
         st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
         
         # Redraw the map with updated markers and lines
-        if len(st.session_state['all_clicks']) >= 2:
-            distances = calculate_geodesic_distance(st.session_state['all_clicks'])
-            draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
+        distances = calculate_geodesic_distance(st.session_state['all_clicks'])
+        draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
 
 # Capture the current map center and zoom level
 if location_data and location_data.get('bounds') is not None:
