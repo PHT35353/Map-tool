@@ -2,7 +2,6 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 from geopy.distance import geodesic
-import time
 
 # Streamlit app title
 st.title("Pipe Distance Calculator Using Leaflet and OpenStreetMap")
@@ -100,5 +99,5 @@ if len(st.session_state['all_clicks']) >= 2:
 # Clear Points button in the sidebar
 if st.sidebar.button("Clear Points"):
     st.session_state['all_clicks'] = []
-    st.session_state['last_clicked_coords'] = None
+    st.session_state['last_clicked_coords'] = None  # Reset the last clicked coordinates
     st.sidebar.write("Points cleared. Select new locations.")
