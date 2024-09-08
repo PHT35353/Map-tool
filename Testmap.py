@@ -58,34 +58,30 @@ location_data = st_folium(m, height=500, width=700)
 if 'all_clicks' not in st.session_state:
     st.session_state['all_clicks'] = []
 
-# Process map clicks, and ignore zoom/pan events
-if location_data:
-    if location_data.get('last_clicked') is not None:
-        lat_lng = location_data['last_clicked']
-        
-        # Ensure the click is not caused by a zoom or pan event
-        if 'map_bounds' in location_data:
-            # Store the clicked location
-            st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
-            notify_click(lat_lng)
+# Process map clicks, and ensure clicks are registered correctly
+if location_data and location_data.get('last_clicked') is not None:
+    lat_lng = location_data['last_clicked']
+    # Store the clicked location in session state
+    st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
+    notify_click(lat_lng)
 
-            # Redraw the map with markers and lines
-            if len(st.session_state['all_clicks']) >= 2:
-                distances = calculate_distance(st.session_state['all_clicks'])
-                draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
-
-    # Show the selected points in the sidebar
-    if len(st.session_state['all_clicks']) > 0:
-        st.sidebar.subheader("Selected Points:")
-        for i, point in enumerate(st.session_state['all_clicks'], start=1):
-            st.sidebar.markdown(f"**Point {i}:** ({point['lat']:.5f}, {point['lng']:.5f})")
-
-    # Calculate and display distances if at least two points are selected
+    # Redraw the map with markers and lines
     if len(st.session_state['all_clicks']) >= 2:
         distances = calculate_distance(st.session_state['all_clicks'])
-        st.sidebar.subheader("Distances Between Points:")
-        for i, dist in enumerate(distances, start=1):
-            st.sidebar.markdown(f"**Point {i} to Point {i+1}:** {dist}")
+        draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
+
+# Show the selected points in the sidebar
+if len(st.session_state['all_clicks']) > 0:
+    st.sidebar.subheader("Selected Points:")
+    for i, point in enumerate(st.session_state['all_clicks'], start=1):
+        st.sidebar.markdown(f"**Point {i}:** ({point['lat']:.5f}, {point['lng']:.5f})")
+
+# Calculate and display distances if at least two points are selected
+if len(st.session_state['all_clicks']) >= 2:
+    distances = calculate_distance(st.session_state['all_clicks'])
+    st.sidebar.subheader("Distances Between Points:")
+    for i, dist in enumerate(distances, start=1):
+        st.sidebar.markdown(f"**Point {i} to Point {i+1}:** {dist}")
 
 # Clear Points button in the sidebar
 if st.sidebar.button("Clear Points"):
