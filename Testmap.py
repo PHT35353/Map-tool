@@ -136,14 +136,16 @@ if location_data and 'center' in location_data and 'zoom' in location_data:
 # Sidebar section for removing points
 if len(st.session_state['all_clicks']) > 0:
     st.sidebar.subheader("Selected Points:")
-    for i, point in enumerate(st.session_state['all_clicks'], start=1):
+    for i, point in enumerate(st.session_state['all_clicks'], start=0):
         col1, col2 = st.sidebar.columns([3, 1])
         col1.markdown(f"**{point['name']}:** ({point['lat']:.5f}, {point['lng']:.5f})")
         
         # Add a "Remove" button next to each point
         if col2.button(f"Remove {point['name']}", key=f"remove_{i}"):
-            # Remove the point from the list
-            st.session_state['all_clicks'].pop(i)
+            # Ensure valid index range for removal
+            if 0 <= i < len(st.session_state['all_clicks']):
+                # Remove the point from the list
+                del st.session_state['all_clicks'][i]
             
             # Re-render the map and sidebar without the removed point
             distances_in_sidebar = draw_lines_and_markers(m, st.session_state['all_clicks'], st.session_state['removed_lines'])
