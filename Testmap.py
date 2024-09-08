@@ -33,17 +33,19 @@ def draw_lines_and_markers(map_obj, locations, distances):
     for i, point in enumerate(locations):
         folium.Marker([point['lat'], point['lng']], popup=f"Point {i+1}").add_to(map_obj)
     
-    # Draw a continuous line connecting all the clicked points
+    # Draw a line between each pair of points and show the distance
     if len(locations) > 1:
-        folium.PolyLine(
-            locations=[[loc['lat'], loc['lng']] for loc in locations],
-            color="blue", weight=2.5, opacity=1
-        ).add_to(map_obj)
-        
-        # Show distance between each pair of points
         for i in range(1, len(locations)):
             point1 = locations[i-1]
             point2 = locations[i]
+            
+            # Draw line between point1 and point2
+            folium.PolyLine(
+                locations=[[point1['lat'], point1['lng']], [point2['lat'], point2['lng']]],
+                color="blue", weight=2.5, opacity=1
+            ).add_to(map_obj)
+            
+            # Show distance at the midpoint of the line
             midpoint = [(point1['lat'] + point2['lat']) / 2, (point1['lng'] + point2['lng']) / 2]
             folium.Marker(midpoint, 
                           icon=folium.DivIcon(html=f"<div style='font-size: 12px; color: black;'>{distances[i-1]}</div>")
