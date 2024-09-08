@@ -26,7 +26,9 @@ def draw_lines_and_markers(map_obj, locations, lines_to_remove):
     distances = []
     # Add markers (dots) for each clicked point
     for i, point in enumerate(locations):
-        folium.Marker([point['lat'], point['lng']], popup=f"Point {i+1}").add_to(map_obj)
+        folium.Marker([point['lat'], point['lng']], 
+                      popup=f"{point['name']}", 
+                      icon=folium.Icon(color=point['color'])).add_to(map_obj)
     
     # Draw lines between every pair of points and calculate distances
     if len(locations) > 1:
@@ -46,7 +48,7 @@ def draw_lines_and_markers(map_obj, locations, lines_to_remove):
                 
                 # Calculate and save distance
                 distance = calculate_distance((point1['lat'], point1['lng']), (point2['lat'], point2['lng']))
-                distances.append({'i': i, 'j': j, 'label': f"Point {i+1} to Point {j+1}: {distance}"})
+                distances.append({'i': i, 'j': j, 'label': f"{point1['name']} to {point2['name']}: {distance}"})
                 
                 # Show distance at the midpoint of the line
                 midpoint = [(point1['lat'] + point2['lat']) / 2, (point1['lng'] + point2['lng']) / 2]
@@ -110,20 +112,22 @@ location_data = st_folium(m, height=map_height, width=map_width)
 if st.button("Enlarge/Reduce Map"):
     st.session_state['fullscreen'] = not st.session_state['fullscreen']  # Toggle fullscreen state
 
-# Process new clicks on the map
+# Sidebar section for adding names and colors to each point
 if location_data and location_data.get('last_clicked') is not None:
     lat_lng = location_data['last_clicked']
     
-    # Check if the clicked coordinates are different from the last click
-    if st.session_state['last_clicked_coords'] is None or \
-       (lat_lng['lat'] != st.session_state['last_clicked_coords']['lat'] or \
-        lat_lng['lng'] != st.session_state['last_clicked_coords']['lng']):
-        
-        # Update the last clicked coordinates
-        st.session_state['last_clicked_coords'] = lat_lng
-        
+    # Custom name and color for the new point
+    point_name = st.sidebar.text_input("Name for this point", f"Point {len(st.session_state['all_clicks']) + 1}")
+    point_color = st.sidebar.color_picker("Select color for this point", "#3186cc")
+    
+    if st.sidebar.button("Add Point"):
         # Store the clicked location in session state
-        st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
+        st.session_state['all_clicks'].append({
+            'lat': lat_lng['lat'], 
+            'lng': lat_lng['lng'], 
+            'name': point_name,
+            'color': point_color
+        })
         
         # Update the map center only when a point is clicked
         st.session_state['map_center'] = [lat_lng['lat'], lat_lng['lng']]
@@ -142,10 +146,10 @@ if len(st.session_state['all_clicks']) > 0:
     st.sidebar.subheader("Selected Points:")
     for i, point in enumerate(st.session_state['all_clicks'], start=1):
         col1, col2 = st.sidebar.columns([3, 1])
-        col1.markdown(f"**Point {i}:** ({point['lat']:.5f}, {point['lng']:.5f})")
+        col1.markdown(f"**{point['name']}:** ({point['lat']:.5f}, {point['lng']:.5f})")
         
         # Add a "Remove" button next to each point
-        if col2.button(f"Remove Point {i}", key=f"remove_{i}"):
+        if col2.button(f"Remove {point['name']}", key=f"remove_{i}"):
             # Remove the point from the list
             st.session_state['all_clicks'].pop(i)
             
