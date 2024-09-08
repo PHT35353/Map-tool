@@ -58,7 +58,7 @@ if 'map_zoom' not in st.session_state:
 if 'all_clicks' not in st.session_state:
     st.session_state['all_clicks'] = []  # To track all clicked points
 
-# Initialize the map
+# Initialize the map with stored session state center and zoom
 m = folium.Map(location=st.session_state['map_center'], zoom_start=st.session_state['map_zoom'])
 
 # Draw existing points and lines
