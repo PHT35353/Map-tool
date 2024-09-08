@@ -77,9 +77,23 @@ if 'map_zoom' not in st.session_state:
 if 'fullscreen' not in st.session_state:
     st.session_state['fullscreen'] = False  # Track whether the map is fullscreen
 
-# Set the size of the map depending on fullscreen mode
-map_height = 500 if not st.session_state['fullscreen'] else 800
-map_width = 700 if not st.session_state['fullscreen'] else 1200  # Adjust the width for larger view
+# Latitude and Longitude search in the sidebar
+st.sidebar.subheader("Search by Coordinates")
+lat = st.sidebar.text_input("Enter Latitude", "")
+lng = st.sidebar.text_input("Enter Longitude", "")
+
+# If both latitude and longitude are provided, update the map center
+if lat and lng:
+    try:
+        lat, lng = float(lat), float(lng)
+        st.session_state['map_center'] = [lat, lng]
+        st.session_state['map_zoom'] = 14  # Zoom in to show the location clearly
+    except ValueError:
+        st.warning("Please enter valid numeric coordinates for both latitude and longitude.")
+
+# Adjust map size based on whether it's in fullscreen mode
+map_height = 500 if not st.session_state['fullscreen'] else 900  # Increase height to fill screen
+map_width = 700 if not st.session_state['fullscreen'] else 1400  # Increase width to fill screen
 
 # Initialize the map with stored center and zoom
 m = initialize_map(st.session_state['map_center'], st.session_state['map_zoom'])
