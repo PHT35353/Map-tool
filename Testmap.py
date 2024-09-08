@@ -54,22 +54,25 @@ def notify_click(point):
 # Collect map data
 location_data = st_folium(m, height=500, width=700)
 
-# Debug output for location data
-st.write("Location Data:", location_data)
-
 # Store clicks in session state
 if 'all_clicks' not in st.session_state:
     st.session_state['all_clicks'] = []
 
-# Only process map clicks, not map movement (zoom)
+# Process map clicks, and ignore zoom/pan events
 if location_data:
     if location_data.get('last_clicked') is not None:
         lat_lng = location_data['last_clicked']
-        st.write("Last clicked location:", lat_lng)  # Debug message
         
-        # Store the clicked location
-        st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
-        notify_click(lat_lng)
+        # Ensure the click is not caused by a zoom or pan event
+        if 'map_bounds' in location_data:
+            # Store the clicked location
+            st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
+            notify_click(lat_lng)
+
+            # Redraw the map with markers and lines
+            if len(st.session_state['all_clicks']) >= 2:
+                distances = calculate_distance(st.session_state['all_clicks'])
+                draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
 
     # Show the selected points in the sidebar
     if len(st.session_state['all_clicks']) > 0:
@@ -83,9 +86,6 @@ if location_data:
         st.sidebar.subheader("Distances Between Points:")
         for i, dist in enumerate(distances, start=1):
             st.sidebar.markdown(f"**Point {i} to Point {i+1}:** {dist}")
-        
-        # Draw lines and markers on the map, showing distance on the map
-        draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
 
 # Clear Points button in the sidebar
 if st.sidebar.button("Clear Points"):
