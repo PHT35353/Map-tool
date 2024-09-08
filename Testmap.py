@@ -13,18 +13,21 @@ st.sidebar.title("Selected Points & Distances")
 st.markdown(
     """
     <style>
-    .styled-button {
+    .stButton>button {
         background-color: #4CAF50;
         color: white;
         border: none;
-        padding: 8px 16px;
+        padding: 10px 20px;
         text-align: center;
         text-decoration: none;
         display: inline-block;
-        font-size: 12px;
+        font-size: 14px;
         margin: 4px 2px;
         cursor: pointer;
         border-radius: 12px;
+    }
+    .small-button {
+        font-size: 12px !important;
     }
     </style>
     """, unsafe_allow_html=True
@@ -120,8 +123,8 @@ if lat and lng:
         st.warning("Please enter valid numeric coordinates for both latitude and longitude.")
 
 # Set a fixed map size (no enlarging feature)
-map_height = 500
-map_width = 700
+map_height = 1000
+map_width = 1000
 
 # Initialize the map with stored center and zoom
 m = initialize_map(st.session_state['map_center'], st.session_state['map_zoom'])
@@ -170,15 +173,8 @@ if len(st.session_state['all_clicks']) > 0:
         col1, col2 = st.sidebar.columns([3, 1])
         col1.markdown(f"**{point['name']}:** ({point['lat']:.5f}, {point['lng']:.5f})")
         
-        # Add a "Remove" button using HTML and CSS
-        remove_button = st.sidebar.markdown(
-            f"""
-            <button class="styled-button" onclick="window.location.reload()">Remove Point {i}</button>
-            """, unsafe_allow_html=True
-        )
-        
-        # Remove point functionality
-        if remove_button:
+        # Add a "Remove" button using Streamlit's built-in button functionality, with improved styling
+        if col2.button(f"Remove Point {i}", key=f"remove_{i}"):
             # Ensure valid index range for removal
             if 0 <= i < len(st.session_state['all_clicks']):
                 # Remove the point from the list
