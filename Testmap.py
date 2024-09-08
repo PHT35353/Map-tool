@@ -75,10 +75,6 @@ if 'map_center' not in st.session_state:
 if 'map_zoom' not in st.session_state:
     st.session_state['map_zoom'] = 7  # Initial zoom level suitable for the Netherlands
 
-# Toggle fullscreen state
-if 'fullscreen' not in st.session_state:
-    st.session_state['fullscreen'] = False  # Track whether the map is fullscreen
-
 # Latitude and Longitude search in the sidebar
 st.sidebar.subheader("Search by Coordinates")
 lat = st.sidebar.text_input("Enter Latitude", "")
@@ -93,9 +89,9 @@ if lat and lng:
     except ValueError:
         st.warning("Please enter valid numeric coordinates for both latitude and longitude.")
 
-# Adjust map size based on whether it's in fullscreen mode
-map_height = 500 if not st.session_state['fullscreen'] else 800  # Increase height to a reasonable large size
-map_width = 700 if not st.session_state['fullscreen'] else 1200  # Increase width to a reasonable large size
+# Set a fixed map size (no enlarging feature)
+map_height = 500
+map_width = 700
 
 # Initialize the map with stored center and zoom
 m = initialize_map(st.session_state['map_center'], st.session_state['map_zoom'])
@@ -107,10 +103,6 @@ if len(st.session_state['all_clicks']) > 0:
 
 # Collect map data (user clicks and map movements)
 location_data = st_folium(m, height=map_height, width=map_width)
-
-# Fullscreen toggle button
-if st.button("Enlarge/Reduce Map"):
-    st.session_state['fullscreen'] = not st.session_state['fullscreen']  # Toggle fullscreen state
 
 # Sidebar section for adding names and colors to each point
 if location_data and location_data.get('last_clicked') is not None:
