@@ -2,6 +2,7 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 from geopy.distance import geodesic
+import time
 
 # Streamlit app title
 st.title("Pipe Distance Calculator Using Leaflet and OpenStreetMap")
@@ -51,6 +52,10 @@ def draw_lines_and_markers(map_obj, locations, distances):
 def notify_click(point):
     st.sidebar.write(f"Click confirmed at: ({point['lat']:.5f}, {point['lng']:.5f})")
 
+# Time tracking to filter zooming/panning events
+if 'last_click_time' not in st.session_state:
+    st.session_state['last_click_time'] = 0
+
 # Collect map data
 location_data = st_folium(m, height=500, width=700)
 
@@ -59,16 +64,21 @@ if 'all_clicks' not in st.session_state:
     st.session_state['all_clicks'] = []
 
 # Process map clicks, and ensure clicks are registered correctly
+current_time = time.time()
 if location_data and location_data.get('last_clicked') is not None:
     lat_lng = location_data['last_clicked']
-    # Store the clicked location in session state
-    st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
-    notify_click(lat_lng)
 
-    # Redraw the map with markers and lines
-    if len(st.session_state['all_clicks']) >= 2:
-        distances = calculate_distance(st.session_state['all_clicks'])
-        draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
+    # Filter out zooming/panning events by checking the time since the last click
+    if current_time - st.session_state['last_click_time'] > 1:  # 1 second delay to avoid zoom/pan registration
+        # Store the clicked location in session state
+        st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
+        st.session_state['last_click_time'] = current_time  # Update last click time
+        notify_click(lat_lng)
+
+        # Redraw the map with markers and lines
+        if len(st.session_state['all_clicks']) >= 2:
+            distances = calculate_distance(st.session_state['all_clicks'])
+            draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
 
 # Show the selected points in the sidebar
 if len(st.session_state['all_clicks']) > 0:
