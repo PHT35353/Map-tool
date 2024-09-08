@@ -52,9 +52,9 @@ def draw_lines_and_markers(map_obj, locations, distances):
 def notify_click(point):
     st.sidebar.write(f"Click confirmed at: ({point['lat']:.5f}, {point['lng']:.5f})")
 
-# Time tracking to filter zooming/panning events
-if 'last_click_time' not in st.session_state:
-    st.session_state['last_click_time'] = 0
+# Store session state for previous clicks
+if 'last_clicked_coords' not in st.session_state:
+    st.session_state['last_clicked_coords'] = None  # To track the last click coordinates
 
 # Collect map data
 location_data = st_folium(m, height=500, width=700)
@@ -63,16 +63,20 @@ location_data = st_folium(m, height=500, width=700)
 if 'all_clicks' not in st.session_state:
     st.session_state['all_clicks'] = []
 
-# Process map clicks, and ensure clicks are registered correctly
-current_time = time.time()
+# Only process valid clicks (coordinates must change)
 if location_data and location_data.get('last_clicked') is not None:
     lat_lng = location_data['last_clicked']
-
-    # Filter out zooming/panning events by checking the time since the last click
-    if current_time - st.session_state['last_click_time'] > 1:  # 1 second delay to avoid zoom/pan registration
+    
+    # Check if the clicked coordinates are different from the last click (ignore zoom/pan)
+    if st.session_state['last_clicked_coords'] is None or \
+       (lat_lng['lat'] != st.session_state['last_clicked_coords']['lat'] or \
+        lat_lng['lng'] != st.session_state['last_clicked_coords']['lng']):
+        
+        # Update the last clicked coordinates
+        st.session_state['last_clicked_coords'] = lat_lng
+        
         # Store the clicked location in session state
         st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
-        st.session_state['last_click_time'] = current_time  # Update last click time
         notify_click(lat_lng)
 
         # Redraw the map with markers and lines
@@ -96,4 +100,5 @@ if len(st.session_state['all_clicks']) >= 2:
 # Clear Points button in the sidebar
 if st.sidebar.button("Clear Points"):
     st.session_state['all_clicks'] = []
+    st.session_state['last_clicked_coords'] = None
     st.sidebar.write("Points cleared. Select new locations.")
