@@ -1,8 +1,6 @@
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
-from geopy.geocoders import Nominatim
-from geopy.exc import GeocoderTimedOut
 from geopy.distance import geodesic
 
 # Streamlit app title
@@ -10,21 +8,6 @@ st.title("Accurate Distance Calculator Using Leaflet and Geodesic Distance")
 
 # Sidebar for displaying information and actions
 st.sidebar.title("Selected Points & Distances")
-
-# Initialize a geocoder
-geolocator = Nominatim(user_agent="geoapiExercises")
-
-# Function to geocode an address and return coordinates
-def geocode_address(address):
-    try:
-        location = geolocator.geocode(address, timeout=10)
-        if location:
-            return (location.latitude, location.longitude)
-        else:
-            st.warning("Address not found. Please enter a valid address.")
-    except GeocoderTimedOut:
-        st.error("Geocoding service timed out. Please try again.")
-    return None
 
 # Initialize a new map with dynamic center and zoom
 def initialize_map(center, zoom):
@@ -94,15 +77,19 @@ if 'map_zoom' not in st.session_state:
 if 'fullscreen' not in st.session_state:
     st.session_state['fullscreen'] = False  # Track whether the map is fullscreen
 
-# Search bar for entering addresses
-address = st.text_input("Enter an address", "")
+# Search by Coordinates
+st.sidebar.subheader("Search by Coordinates")
+lat = st.sidebar.text_input("Enter Latitude", "")
+lng = st.sidebar.text_input("Enter Longitude", "")
 
-# If an address is entered, geocode it and update the map center
-if address:
-    location = geocode_address(address)
-    if location:
-        st.session_state['map_center'] = location
-        st.session_state['map_zoom'] = 14  # Zoom in to show the address clearly
+# If both latitude and longitude are provided, update the map center
+if lat and lng:
+    try:
+        lat, lng = float(lat), float(lng)
+        st.session_state['map_center'] = [lat, lng]
+        st.session_state['map_zoom'] = 14  # Zoom in to show the location clearly
+    except ValueError:
+        st.warning("Please enter valid numeric coordinates for both latitude and longitude.")
 
 # Initialize the map with stored center and zoom
 m = initialize_map(st.session_state['map_center'], st.session_state['map_zoom'])
