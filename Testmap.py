@@ -1,6 +1,8 @@
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut
 from geopy.distance import geodesic
 
 # Streamlit app title
@@ -8,6 +10,21 @@ st.title("Accurate Distance Calculator Using Leaflet and Geodesic Distance")
 
 # Sidebar for displaying information and actions
 st.sidebar.title("Selected Points & Distances")
+
+# Initialize a geocoder
+geolocator = Nominatim(user_agent="geoapiExercises")
+
+# Function to geocode an address and return coordinates
+def geocode_address(address):
+    try:
+        location = geolocator.geocode(address, timeout=10)
+        if location:
+            return (location.latitude, location.longitude)
+        else:
+            st.warning("Address not found. Please enter a valid address.")
+    except GeocoderTimedOut:
+        st.error("Geocoding service timed out. Please try again.")
+    return None
 
 # Initialize a new map with dynamic center and zoom
 def initialize_map(center, zoom):
@@ -73,6 +90,20 @@ if 'map_center' not in st.session_state:
 if 'map_zoom' not in st.session_state:
     st.session_state['map_zoom'] = 7  # Initial zoom level suitable for the Netherlands
 
+# Toggle fullscreen state
+if 'fullscreen' not in st.session_state:
+    st.session_state['fullscreen'] = False  # Track whether the map is fullscreen
+
+# Search bar for entering addresses
+address = st.text_input("Enter an address", "")
+
+# If an address is entered, geocode it and update the map center
+if address:
+    location = geocode_address(address)
+    if location:
+        st.session_state['map_center'] = location
+        st.session_state['map_zoom'] = 14  # Zoom in to show the address clearly
+
 # Initialize the map with stored center and zoom
 m = initialize_map(st.session_state['map_center'], st.session_state['map_zoom'])
 
@@ -82,7 +113,12 @@ if len(st.session_state['all_clicks']) > 0:
     distances_in_sidebar = draw_lines_and_markers(m, st.session_state['all_clicks'], st.session_state['removed_lines'])
 
 # Collect map data (user clicks and map movements)
-location_data = st_folium(m, height=500, width=700)
+map_height = 500 if not st.session_state['fullscreen'] else 800  # Adjust map size based on fullscreen
+location_data = st_folium(m, height=map_height, width=700)
+
+# Fullscreen toggle button
+if st.button("Enlarge/Reduce Map"):
+    st.session_state['fullscreen'] = not st.session_state['fullscreen']  # Toggle fullscreen state
 
 # Process new clicks on the map
 if location_data and location_data.get('last_clicked') is not None:
