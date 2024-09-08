@@ -4,24 +4,24 @@ from streamlit_folium import st_folium
 from geopy.distance import geodesic
 
 # Streamlit app title
-st.title("Pipe Distance Calculator Using Leaflet and OpenStreetMap")
+st.title("Accurate Distance Calculator Using Leaflet and Geodesic Distance")
 
 # Sidebar for displaying information and actions
 st.sidebar.title("Selected Points & Distances")
 
-# Initialize the map with a center point
-m = folium.Map(location=[52.52, 13.405], zoom_start=10)  # Centered on Berlin, Germany
+# Initialize the map with a center point (Berlin)
+m = folium.Map(location=[52.52, 13.405], zoom_start=10)
 
 # Instructions
-st.sidebar.markdown("Click on the map to place markers and calculate distances.")
+st.sidebar.markdown("Click on the map to place markers and calculate geodesic distances.")
 
-# Function to calculate distance between two points and format it nicely
-def calculate_distance(locations):
+# Function to calculate accurate geodesic distance
+def calculate_geodesic_distance(locations):
     distances = []
     for i in range(1, len(locations)):
         coords_1 = (locations[i-1]['lat'], locations[i-1]['lng'])
         coords_2 = (locations[i]['lat'], locations[i]['lng'])
-        distance_km = geodesic(coords_1, coords_2).km
+        distance_km = geodesic(coords_1, coords_2).kilometers
         if distance_km < 1:
             distance = f"{distance_km * 1000:.2f} meters"
         else:
@@ -80,7 +80,7 @@ if location_data and location_data.get('last_clicked') is not None:
 
         # Redraw the map with markers and lines
         if len(st.session_state['all_clicks']) >= 2:
-            distances = calculate_distance(st.session_state['all_clicks'])
+            distances = calculate_geodesic_distance(st.session_state['all_clicks'])
             draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
 
 # Show the selected points in the sidebar
@@ -91,7 +91,7 @@ if len(st.session_state['all_clicks']) > 0:
 
 # Calculate and display distances if at least two points are selected
 if len(st.session_state['all_clicks']) >= 2:
-    distances = calculate_distance(st.session_state['all_clicks'])
+    distances = calculate_geodesic_distance(st.session_state['all_clicks'])
     st.sidebar.subheader("Distances Between Points:")
     for i, dist in enumerate(distances, start=1):
         st.sidebar.markdown(f"**Point {i} to Point {i+1}:** {dist}")
