@@ -10,42 +10,73 @@ st.title("Pipe Distance Calculator Using Leaflet and OpenStreetMap")
 m = folium.Map(location=[52.52, 13.405], zoom_start=10)  # Centered on Berlin, Germany
 
 # Instructions
-st.markdown("Click on two locations on the map to calculate the distance between them.")
+st.markdown("Click on the map to place markers and calculate distances.")
 
-# Add markers based on user input (clicks)
+# Sidebar for displaying information
+st.sidebar.title("Selected Points & Distances")
+
+# Function to calculate distance between two points and format it nicely
+def calculate_distance(locations):
+    distances = []
+    for i in range(1, len(locations)):
+        coords_1 = (locations[i-1]['lat'], locations[i-1]['lng'])
+        coords_2 = (locations[i]['lat'], locations[i]['lng'])
+        distance_km = geodesic(coords_1, coords_2).km
+        if distance_km < 1:
+            distance = f"{distance_km * 1000:.2f} meters"
+        else:
+            distance = f"{distance_km:.2f} km"
+        distances.append(distance)
+    return distances
+
+# Add markers and lines to the map
+def draw_lines_and_markers(map_obj, locations):
+    if len(locations) > 1:
+        for i in range(1, len(locations)):
+            point1 = locations[i-1]
+            point2 = locations[i]
+            folium.Marker([point1['lat'], point1['lng']], popup=f"Point {i}").add_to(map_obj)
+            folium.Marker([point2['lat'], point2['lng']], popup=f"Point {i+1}").add_to(map_obj)
+            folium.PolyLine(locations=[[point1['lat'], point1['lng']], [point2['lat'], point2['lng']]],
+                            color="blue", weight=2.5, opacity=1).add_to(map_obj)
+    else:
+        folium.Marker([locations[0]['lat'], locations[0]['lng']], popup="Point 1").add_to(map_obj)
+
+# Display confirmation when a point is clicked
+def notify_click(point):
+    st.sidebar.write(f"Click confirmed at: ({point['lat']:.5f}, {point['lng']:.5f})")
+
+# Collect map data
 location_data = st_folium(m, height=500, width=700)
 
-# Function to calculate distance between two points
-def calculate_distance(locations):
-    if len(locations) < 2:
-        return "Please select two points on the map."
-    
-    coords_1 = (locations[0]['lat'], locations[0]['lng'])
-    coords_2 = (locations[1]['lat'], locations[1]['lng'])
-    distance = geodesic(coords_1, coords_2).km
-    return f"Distance between selected points: {distance:.2f} km"
+# Store clicks in session state
+if 'all_clicks' not in st.session_state:
+    st.session_state['all_clicks'] = []
 
-# Collect the locations from the user's clicks
+# Process the clicks
 if location_data:
-    if 'all_clicks' not in st.session_state:
-        st.session_state['all_clicks'] = []
-
-    # Get the latest click
     if location_data['last_clicked'] is not None:
         lat_lng = location_data['last_clicked']
         st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
+        notify_click(lat_lng)
 
-    # Display the selected points
+    # Show the selected points
     if len(st.session_state['all_clicks']) > 0:
-        st.write(f"Selected points: {st.session_state['all_clicks']}")
+        st.sidebar.subheader("Selected Points:")
+        for i, point in enumerate(st.session_state['all_clicks'], start=1):
+            st.sidebar.markdown(f"**Point {i}:** ({point['lat']:.5f}, {point['lng']:.5f})")
 
-    # Calculate and display the distance if two points are selected
+    # Calculate and display distances if at least two points are selected
     if len(st.session_state['all_clicks']) >= 2:
-        result = calculate_distance(st.session_state['all_clicks'][:2])  # Only use the first two points
-        st.write(result)
+        distances = calculate_distance(st.session_state['all_clicks'])
+        st.sidebar.subheader("Distances Between Points:")
+        for i, dist in enumerate(distances, start=1):
+            st.sidebar.markdown(f"**Point {i} to Point {i+1}:** {dist}")
+        
+        # Draw lines and markers on the map
+        draw_lines_and_markers(m, st.session_state['all_clicks'])
 
 # Button to clear selected points
 if st.button("Clear Points"):
     st.session_state['all_clicks'] = []
     st.write("Points cleared. Select new locations.")
-
