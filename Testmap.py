@@ -22,7 +22,7 @@ def calculate_distance(coords_1, coords_2):
         return f"{distance_km:.2f} km"
 
 # Add markers and lines to the map
-def draw_lines_and_markers(map_obj, locations):
+def draw_lines_and_markers(map_obj, locations, lines_to_remove):
     distances = []
     # Add markers (dots) for each clicked point
     for i, point in enumerate(locations):
@@ -32,6 +32,9 @@ def draw_lines_and_markers(map_obj, locations):
     if len(locations) > 1:
         for i in range(len(locations)):
             for j in range(i+1, len(locations)):
+                if (i, j) in lines_to_remove:
+                    continue  # Skip drawing lines that were removed
+
                 point1 = locations[i]
                 point2 = locations[j]
                 
@@ -43,7 +46,7 @@ def draw_lines_and_markers(map_obj, locations):
                 
                 # Calculate and save distance
                 distance = calculate_distance((point1['lat'], point1['lng']), (point2['lat'], point2['lng']))
-                distances.append(f"Point {i+1} to Point {j+1}: {distance}")
+                distances.append({'i': i, 'j': j, 'label': f"Point {i+1} to Point {j+1}: {distance}"})
                 
                 # Show distance at the midpoint of the line
                 midpoint = [(point1['lat'] + point2['lat']) / 2, (point1['lng'] + point2['lng']) / 2]
@@ -60,6 +63,10 @@ if 'last_clicked_coords' not in st.session_state:
 if 'all_clicks' not in st.session_state:
     st.session_state['all_clicks'] = []  # To track all clicked points
 
+# Track the lines that are removed
+if 'removed_lines' not in st.session_state:
+    st.session_state['removed_lines'] = set()  # Set of tuples (i, j) for lines removed
+
 # Set initial map state (center and zoom)
 if 'map_center' not in st.session_state:
     st.session_state['map_center'] = [52.52, 13.405]  # Initial center (Berlin)
@@ -72,7 +79,7 @@ m = initialize_map(st.session_state['map_center'], st.session_state['map_zoom'])
 # Draw markers and lines from previous clicks, and collect distances
 distances_in_sidebar = []
 if len(st.session_state['all_clicks']) > 0:
-    distances_in_sidebar = draw_lines_and_markers(m, st.session_state['all_clicks'])
+    distances_in_sidebar = draw_lines_and_markers(m, st.session_state['all_clicks'], st.session_state['removed_lines'])
 
 # Collect map data (user clicks and map movements)
 location_data = st_folium(m, height=500, width=700)
@@ -96,7 +103,7 @@ if location_data and location_data.get('last_clicked') is not None:
         st.session_state['map_center'] = [lat_lng['lat'], lat_lng['lng']]
         
         # Redraw the map with updated markers and lines, and collect distances
-        distances_in_sidebar = draw_lines_and_markers(m, st.session_state['all_clicks'])
+        distances_in_sidebar = draw_lines_and_markers(m, st.session_state['all_clicks'], st.session_state['removed_lines'])
 
 # Capture the current map zoom and center after zooming/panning
 if location_data and 'center' in location_data and 'zoom' in location_data:
@@ -117,17 +124,28 @@ if len(st.session_state['all_clicks']) > 0:
             st.session_state['all_clicks'].pop(i)
             
             # Re-render the map and sidebar without the removed point
-            distances_in_sidebar = draw_lines_and_markers(m, st.session_state['all_clicks'])
+            distances_in_sidebar = draw_lines_and_markers(m, st.session_state['all_clicks'], st.session_state['removed_lines'])
             break  # Break the loop to prevent issues with rendering the sidebar mid-change
 
-# Display the distances between all points in the sidebar
+# Display the distances between all points in the sidebar and allow removal
 if distances_in_sidebar:
     st.sidebar.subheader("Distances Between Points:")
-    for distance_info in distances_in_sidebar:
-        st.sidebar.markdown(distance_info)
+    for distance in distances_in_sidebar:
+        col1, col2 = st.sidebar.columns([3, 1])
+        col1.markdown(distance['label'])
+        
+        # Add a "Remove Line" button next to each distance
+        if col2.button(f"Remove Line {distance['i']+1}-{distance['j']+1}", key=f"remove_line_{distance['i']}_{distance['j']}"):
+            # Add the removed line to the set
+            st.session_state['removed_lines'].add((distance['i'], distance['j']))
+            
+            # Re-render the map and sidebar without the removed line
+            distances_in_sidebar = draw_lines_and_markers(m, st.session_state['all_clicks'], st.session_state['removed_lines'])
+            break  # Break to prevent issues with rendering the sidebar mid-change
 
 # Clear Points button in the sidebar
 if st.sidebar.button("Clear All Points"):
     st.session_state['all_clicks'] = []
     st.session_state['last_clicked_coords'] = None
+    st.session_state['removed_lines'] = set()  # Clear the removed lines as well
     st.sidebar.write("All points cleared. Select new locations.")
