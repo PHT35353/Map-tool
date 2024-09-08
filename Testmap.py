@@ -18,7 +18,7 @@ def calculate_geodesic_distance(locations):
     distances = []
     for i in range(1, len(locations)):
         coords_1 = (locations[i-1]['lat'], locations[i-1]['lng'])
-        coords_2 = (locations[i]['lat'], locations[i]['lng'])
+        coords_2 = (locations[i]['lat'], coords_2)
         distance_km = geodesic(coords_1, coords_2).kilometers
         if distance_km < 1:
             distance = f"{distance_km * 1000:.2f} meters"
@@ -96,10 +96,13 @@ if location_data and location_data.get('last_clicked') is not None:
 # Capture the current map center and zoom level
 if location_data and location_data.get('bounds') is not None:
     bounds = location_data['bounds']
-    new_center_lat = (bounds['north'] + bounds['south']) / 2
-    new_center_lng = (bounds['east'] + bounds['west']) / 2
-    st.session_state['map_center'] = [new_center_lat, new_center_lng]
-    st.session_state['map_zoom'] = location_data.get('zoom', st.session_state['map_zoom'])
+    
+    # Only update if the bounds have 'north', 'south', 'east', and 'west'
+    if 'north' in bounds and 'south' in bounds and 'east' in bounds and 'west' in bounds:
+        new_center_lat = (bounds['north'] + bounds['south']) / 2
+        new_center_lng = (bounds['east'] + bounds['west']) / 2
+        st.session_state['map_center'] = [new_center_lat, new_center_lng]
+        st.session_state['map_zoom'] = location_data.get('zoom', st.session_state['map_zoom'])
 
 # Show the selected points in the sidebar
 if len(st.session_state['all_clicks']) > 0:
