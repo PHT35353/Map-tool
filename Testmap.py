@@ -9,11 +9,9 @@ st.title("Accurate Distance Calculator Using Leaflet and Geodesic Distance")
 # Sidebar for displaying information and actions
 st.sidebar.title("Selected Points & Distances")
 
-# Initialize the map with a center point (Berlin)
-m = folium.Map(location=[52.52, 13.405], zoom_start=10)
-
-# Instructions
-st.sidebar.markdown("Click on the map to place markers and calculate geodesic distances.")
+# Initialize a new map with a center point (Berlin)
+def initialize_map():
+    return folium.Map(location=[52.52, 13.405], zoom_start=10)
 
 # Function to calculate accurate geodesic distance
 def calculate_geodesic_distance(locations):
@@ -31,44 +29,50 @@ def calculate_geodesic_distance(locations):
 
 # Add markers and lines to the map
 def draw_lines_and_markers(map_obj, locations, distances):
-    for i in range(1, len(locations)):
-        point1 = locations[i-1]
-        point2 = locations[i]
+    for i in range(len(locations)):
+        point = locations[i]
         
         # Add markers (dots) at clicked points
-        folium.Marker([point1['lat'], point1['lng']], popup=f"Point {i}").add_to(map_obj)
-        folium.Marker([point2['lat'], point2['lng']], popup=f"Point {i+1}").add_to(map_obj)
+        folium.Marker([point['lat'], point['lng']], popup=f"Point {i+1}").add_to(map_obj)
         
-        # Draw line between points
-        folium.PolyLine(locations=[[point1['lat'], point1['lng']], [point2['lat'], point2['lng']]],
-                        color="blue", weight=2.5, opacity=1).add_to(map_obj)
-        
-        # Show distance on the map
-        midpoint = [(point1['lat'] + point2['lat']) / 2, (point1['lng'] + point2['lng']) / 2]
-        folium.Marker(midpoint, 
-                      icon=folium.DivIcon(html=f"<div style='font-size: 12px; color: black;'>{distances[i-1]}</div>")
-                     ).add_to(map_obj)
-
-# Display confirmation when a point is clicked
-def notify_click(point):
-    st.sidebar.write(f"Click confirmed at: ({point['lat']:.5f}, {point['lng']:.5f})")
+        # Draw line and show distance after two points
+        if i > 0:
+            point1 = locations[i-1]
+            point2 = point
+            
+            # Draw line between points
+            folium.PolyLine(locations=[[point1['lat'], point1['lng']], [point2['lat'], point2['lng']]],
+                            color="blue", weight=2.5, opacity=1).add_to(map_obj)
+            
+            # Show distance on the map
+            midpoint = [(point1['lat'] + point2['lat']) / 2, (point1['lng'] + point2['lng']) / 2]
+            folium.Marker(midpoint, 
+                          icon=folium.DivIcon(html=f"<div style='font-size: 12px; color: black;'>{distances[i-1]}</div>")
+                         ).add_to(map_obj)
 
 # Store session state for previous clicks
 if 'last_clicked_coords' not in st.session_state:
     st.session_state['last_clicked_coords'] = None  # To track the last click coordinates
 
-# Collect map data
+if 'all_clicks' not in st.session_state:
+    st.session_state['all_clicks'] = []  # To track all clicked points
+
+# Re-initialize the map (to ensure persistence of markers and lines)
+m = initialize_map()
+
+# Draw markers and lines from previous clicks
+if len(st.session_state['all_clicks']) > 0:
+    distances = calculate_geodesic_distance(st.session_state['all_clicks'])
+    draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
+
+# Collect map data (user clicks)
 location_data = st_folium(m, height=500, width=700)
 
-# Store clicks in session state
-if 'all_clicks' not in st.session_state:
-    st.session_state['all_clicks'] = []
-
-# Only process valid clicks (coordinates must change)
+# Process new clicks on the map
 if location_data and location_data.get('last_clicked') is not None:
     lat_lng = location_data['last_clicked']
     
-    # Check if the clicked coordinates are different from the last click (ignore zoom/pan)
+    # Check if the clicked coordinates are different from the last click
     if st.session_state['last_clicked_coords'] is None or \
        (lat_lng['lat'] != st.session_state['last_clicked_coords']['lat'] or \
         lat_lng['lng'] != st.session_state['last_clicked_coords']['lng']):
@@ -78,9 +82,8 @@ if location_data and location_data.get('last_clicked') is not None:
         
         # Store the clicked location in session state
         st.session_state['all_clicks'].append({'lat': lat_lng['lat'], 'lng': lat_lng['lng']})
-        notify_click(lat_lng)
-
-        # Redraw the map with markers and lines
+        
+        # Redraw the map with updated markers and lines
         if len(st.session_state['all_clicks']) >= 2:
             distances = calculate_geodesic_distance(st.session_state['all_clicks'])
             draw_lines_and_markers(m, st.session_state['all_clicks'], distances)
@@ -101,5 +104,5 @@ if len(st.session_state['all_clicks']) >= 2:
 # Clear Points button in the sidebar
 if st.sidebar.button("Clear Points"):
     st.session_state['all_clicks'] = []
-    st.session_state['last_clicked_coords'] = None  # Reset the last clicked coordinates
+    st.session_state['last_clicked_coords'] = None
     st.sidebar.write("Points cleared. Select new locations.")
