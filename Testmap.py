@@ -63,7 +63,7 @@ rectangles = []
 total_pipe_length = 0
 
 # Render the map and handle the drawings
-output = st_folium(m, width=725, height=500)  # Renders the map
+output = st_folium(m, width=725, height=500)  # Removed extra rendering
 
 # Check if any drawings were made
 if output and output['all_drawings']:
@@ -144,5 +144,5 @@ if output and output['all_drawings']:
 st.sidebar.subheader("Total Pipe Length")
 st.sidebar.write(f"{total_pipe_length:.2f} meters")
 
-# Render the updated map with the newly added shapes
-st_folium(m, width=725, height=500)  # This renders the final version of the map
+# **Make sure to render the map only once here, with all the shapes added**
+st_folium(m, width=725, height=500)
