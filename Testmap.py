@@ -8,39 +8,38 @@ st.title("Map Tool for Pipe Design with Distance Calculation")
 
 # Instructions
 st.write("""
-1. Select an area of interest on the map.
-2. Click to add dots on the map representing places to pipe from or to.
+1. Interact with the map to zoom in and select points of interest.
+2. Click on the map to add dots representing places to pipe from or to.
 3. Draw lines between these dots (pipes), and the tool will give the distances in real-world scale.
 """)
 
 # Create a base map centered at a default location with proper attribution
-m = folium.Map(location=[45.5236, -122.6750], zoom_start=13, tiles='Stamen Terrain', 
+m = folium.Map(location=[45.5236, -122.6750], zoom_start=13, tiles='Stamen Terrain',
                attr="Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL.")
 
 # Initialize data storage for coordinates
 selected_points = []
 line_segments = []
 
-# Interactive Folium map
+# Capture interaction from the Folium map
 map_data = st_folium(m, width=700, height=500)
 
-# Allow user to select dots (places)
-if map_data and map_data['last_clicked']:
+# Check if the user clicked on the map to add a point
+if map_data and map_data.get('last_clicked'):
     last_click = map_data['last_clicked']
     lat, lon = last_click['lat'], last_click['lng']
     
-    # Append the selected point
+    # Append the selected point to the list
     selected_points.append((lat, lon))
     
     # Add a marker for the selected point
     folium.Marker([lat, lon], popup=f"Place {len(selected_points)}").add_to(m)
 
-    # Refresh the map with updated points
+    # Display the point that was added
     st.write(f"Point {len(selected_points)} added at: Latitude: {lat}, Longitude: {lon}")
 
-# Allow user to draw lines between the points (pipes)
+# Allow user to draw lines between the points (pipes) after two points are added
 if len(selected_points) > 1:
-    # Ask user to connect two points
     st.write("Select two points to connect with a pipe:")
     point1 = st.selectbox("Point 1", range(1, len(selected_points) + 1))
     point2 = st.selectbox("Point 2", range(1, len(selected_points) + 1))
@@ -61,24 +60,11 @@ if len(selected_points) > 1:
         # Store the line segment for reference
         line_segments.append((coord1, coord2, distance))
 
-# Re-render the map with new markers and lines
+# Re-render the map with the new markers and lines
 st_folium(m, width=700, height=500)
 
-# Check if bounds exist before accessing them
-if map_data and 'bounds' in map_data:
-    bounds = map_data['bounds']
-    
-    # Ensure 'northeast' and 'southwest' keys exist in bounds
-    if 'northeast' in bounds and 'southwest' in bounds:
-        north_east = bounds['northeast']
-        south_west = bounds['southwest']
-
-        # Calculate the width and height of the bounding box in meters
-        width = geodesic((north_east['lat'], south_west['lng']), (north_east['lat'], north_east['lng'])).meters
-        height = geodesic((north_east['lat'], south_west['lng']), (south_west['lat'], south_west['lng'])).meters
-
-        st.write(f"Selected Area: Width = {width:.2f} meters, Height = {height:.2f} meters")
-    else:
-        st.write("Bounds information is incomplete. Please try selecting the area again.")
-else:
-    st.write("No bounds selected. Please interact with the map to select an area.")
+# Display a summary of pipe connections and their distances
+if line_segments:
+    st.write("Pipe Connections and Distances:")
+    for idx, (p1, p2, dist) in enumerate(line_segments):
+        st.write(f"Pipe {idx + 1}: From {p1} to {p2}, Distance: {dist:.2f} meters")
