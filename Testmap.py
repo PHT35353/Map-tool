@@ -61,7 +61,46 @@ points = []
 lines = []
 total_pipe_length = 0
 
-# Render the map and handle the drawings
+# JavaScript for the popups to handle names and colors directly on the map
+popup_js = """
+<script>
+function getInputValue() {
+    var pointName = document.getElementById('pointName').value;
+    var pointColor = document.getElementById('pointColor').value;
+    return [pointName, pointColor];
+}
+</script>
+"""
+
+# Store the HTML form for the popup to input name and color
+point_popup_html = """
+<form>
+    <label for="pointName">Point Name:</label><br>
+    <input type="text" id="pointName" value="New Point"><br>
+    <label for="pointColor">Point Color:</label><br>
+    <input type="color" id="pointColor" value="#ff0000"><br>
+    <input type="submit" value="Submit" onclick="getInputValue()">
+</form>
+"""
+
+line_popup_html = """
+<form>
+    <label for="lineName">Line Name:</label><br>
+    <input type="text" id="lineName" value="New Line"><br>
+    <label for="lineColor">Line Color:</label><br>
+    <input type="color" id="lineColor" value="#0000ff"><br>
+    <input type="submit" value="Submit" onclick="getInputValue()">
+</form>
+"""
+
+# Add the popup form to the map for interactive customization
+folium.Marker(
+    location=[default_location[0], default_location[1]], 
+    popup=folium.Popup(point_popup_html + popup_js),
+    icon=folium.Icon(color="blue")
+).add_to(m)
+
+# Handle points and lines dynamically
 output = st_folium(m, width=725, height=500)
 
 # Check if any drawings were made
@@ -83,10 +122,10 @@ if output and output['all_drawings']:
             lat = shape['geometry']['coordinates'][1]
             lng = shape['geometry']['coordinates'][0]
             
-            # Display popup to enter point name and select color (Leaflet-style)
+            # Popup for naming the point and selecting its color
             point_name = f"Point {len(points) + 1}"
             color = "red"  # Default color for points
-            folium.Marker(location=[lat, lng], popup=point_name, icon=folium.Icon(color=color)).add_to(m)
+            folium.Marker(location=[lat, lng], popup=point_popup_html, icon=folium.Icon(color=color)).add_to(m)
             points.append((lat, lng, point_name))
             st.success(f"Placed point at ({lat:.5f}, {lng:.5f}) named '{point_name}'.")
 
