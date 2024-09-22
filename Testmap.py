@@ -10,15 +10,27 @@ st.title("Map-Based Piping Layout Tool with Region Selection and Accurate Measur
 st.markdown("""
 This tool allows you to:
 1. Select an area of the map by drawing a rectangle (region selection).
-2. Place points (representing facilities) within the selected region.
-3. Draw lines (pipes) between the points and calculate distances.
+2. Click to place points (representing facilities) within the selected region.
+3. Draw lines (pipes) between the points and calculate real-life distances.
 4. Measure the width and height of the selected region.
 5. Remove points or lines.
+6. Search for a location by entering latitude and longitude.
 """)
 
 # Set the starting location and zoom to the Netherlands
 default_location = [52.3676, 4.9041]  # Amsterdam, Netherlands
 zoom_start = 13
+
+# Sidebar to manage the map interactions
+st.sidebar.title("Map Interactions")
+
+# Search for a location by Latitude and Longitude
+latitude = st.sidebar.number_input("Latitude", value=default_location[0])
+longitude = st.sidebar.number_input("Longitude", value=default_location[1])
+
+# Button to search for a location
+if st.sidebar.button("Search Location"):
+    default_location = [latitude, longitude]
 
 # Create a Folium map with Mapbox Satellite layer
 m = folium.Map(location=default_location, zoom_start=zoom_start)
@@ -36,19 +48,16 @@ points = []
 lines = []
 distances = []
 
-# Sidebar to manage the map interactions
-st.sidebar.title("Map Interactions")
-
 # Define a place for storing selected region bounds
 selected_region_bounds = st.sidebar.text_area("Selected Region Bounds", "No region selected yet")
 region_dimensions = st.sidebar.text_area("Region Dimensions", "Width and Height not calculated yet")
 
-# Render the map
-output = st_folium(m, width=725)
-
-# Function to calculate geodesic distance between two points (for both lines and area dimensions)
+# Function to calculate geodesic distance between two points
 def calculate_distance(coord1, coord2):
     return geodesic(coord1, coord2).meters
+
+# Render the map and handle the clicks and drawings
+output = st_folium(m, width=725)
 
 # Check if a rectangle (region) was drawn
 if output and output['all_drawings']:
@@ -68,12 +77,10 @@ if output and output['all_drawings']:
             region_dimensions = f"Width: {width:.2f} meters, Height: {height:.2f} meters"
             st.sidebar.success(f"Region Dimensions: {region_dimensions}")
 
-# Place points within the selected region
-latitude = st.sidebar.number_input("Latitude", value=default_location[0])
-longitude = st.sidebar.number_input("Longitude", value=default_location[1])
-
-if st.sidebar.button("Place Facility"):
-    point = [latitude, longitude]
+# Enable placing points by clicking on the map
+if output and output.get('last_clicked'):
+    click_location = output['last_clicked']
+    point = [click_location['lat'], click_location['lng']]
     points.append(point)
     folium.Marker(location=point, tooltip=f"Facility {len(points)}").add_to(m)
     st.success(f"Placed facility at {point}")
