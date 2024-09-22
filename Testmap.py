@@ -32,11 +32,12 @@ if st.sidebar.button("Search Location"):
     default_location = [latitude, longitude]
 
 # Store points and lines
-points = []
-point_names = []
-point_colors = []
-lines = []
-total_pipe_length = 0
+if "points" not in st.session_state:
+    st.session_state.points = []
+    st.session_state.point_names = []
+    st.session_state.point_colors = []
+    st.session_state.lines = []
+    st.session_state.total_pipe_length = 0
 
 # Create the map
 m = folium.Map(location=default_location, zoom_start=zoom_start)
@@ -63,7 +64,7 @@ draw.add_to(m)
 def calculate_distance(coord1, coord2):
     return geodesic(coord1, coord2).meters
 
-# Render the map and handle the drawings
+# Handle the drawings (region selection, placing points, drawing lines)
 output = st_folium(m, width=725, height=500)
 
 # Process any new drawings on the map
@@ -84,9 +85,9 @@ if output and output['all_drawings']:
         elif shape['geometry']['type'] == 'Point':  # Circle Marker placed
             lat = shape['geometry']['coordinates'][1]
             lng = shape['geometry']['coordinates'][0]
-            points.append((lat, lng))  # Save marker coordinates
-            point_names.append(f"Marker {len(points)}")  # Assign a default name
-            point_colors.append("#3388ff")  # Default blue color
+            st.session_state.points.append((lat, lng))  # Save marker coordinates
+            st.session_state.point_names.append(f"Marker {len(st.session_state.points)}")  # Assign a default name
+            st.session_state.point_colors.append("#3388ff")  # Default blue color
 
         elif shape['geometry']['type'] == 'LineString':  # Line drawn (pipe)
             coords = shape['geometry']['coordinates']
@@ -99,34 +100,34 @@ if output and output['all_drawings']:
                 segment_length = calculate_distance(start, end)
                 pipe_length += segment_length
 
-            total_pipe_length += pipe_length
-            lines.append(coords)
+            st.session_state.total_pipe_length += pipe_length
+            st.session_state.lines.append(coords)
 
 # Sidebar for modifying Circle Markers (name and color)
-if len(points) > 0:
+if len(st.session_state.points) > 0:
     st.sidebar.subheader("Modify Markers")
-    marker_idx = st.sidebar.selectbox("Select Marker", range(1, len(points) + 1))
-    new_name = st.sidebar.text_input("Marker Name", value=point_names[marker_idx - 1])
-    new_color = st.sidebar.color_picker("Marker Color", value=point_colors[marker_idx - 1])
+    marker_idx = st.sidebar.selectbox("Select Marker", range(1, len(st.session_state.points) + 1))
+    new_name = st.sidebar.text_input("Marker Name", value=st.session_state.point_names[marker_idx - 1])
+    new_color = st.sidebar.color_picker("Marker Color", value=st.session_state.point_colors[marker_idx - 1])
 
     # Update the selected marker's name and color
-    point_names[marker_idx - 1] = new_name
-    point_colors[marker_idx - 1] = new_color
+    st.session_state.point_names[marker_idx - 1] = new_name
+    st.session_state.point_colors[marker_idx - 1] = new_color
 
-    # Recreate the map with updated markers
-    for i, (lat, lng) in enumerate(points):
-        folium.CircleMarker(
-            location=[lat, lng],
-            radius=8,
-            color=point_colors[i],
-            fill=True,
-            fill_color=point_colors[i],
-            fill_opacity=0.7,
-            popup=point_names[i]
-        ).add_to(m)
+# Recreate the map with updated markers
+for i, (lat, lng) in enumerate(st.session_state.points):
+    folium.CircleMarker(
+        location=[lat, lng],
+        radius=8,
+        color=st.session_state.point_colors[i],
+        fill=True,
+        fill_color=st.session_state.point_colors[i],
+        fill_opacity=0.7,
+        popup=st.session_state.point_names[i]
+    ).add_to(m)
 
 # Recreate all the lines (which are always red)
-for coords in lines:
+for coords in st.session_state.lines:
     folium.PolyLine(
         locations=[(coord[1], coord[0]) for coord in coords],
         color="red",  # All lines are red
@@ -135,7 +136,7 @@ for coords in lines:
 
 # Display the total pipe length in the sidebar
 st.sidebar.subheader("Total Pipe Length")
-st.sidebar.write(f"{total_pipe_length:.2f} meters")
+st.sidebar.write(f"{st.session_state.total_pipe_length:.2f} meters")
 
 # Render the updated map
 st_folium(m, width=725, height=500)
