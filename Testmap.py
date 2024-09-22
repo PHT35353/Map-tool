@@ -4,7 +4,7 @@ from streamlit_folium import st_folium
 from geopy.distance import geodesic
 
 # Set up a title for the app
-st.title("Map-Based Piping Layout Tool with Region Selection and Pipe Drawing")
+st.title("Map-Based Piping Layout Tool with Region Selection and Accurate Measurements")
 
 # Add instructions
 st.markdown("""
@@ -12,7 +12,8 @@ This tool allows you to:
 1. Select an area of the map by drawing a rectangle (region selection).
 2. Place points (representing facilities) within the selected region.
 3. Draw lines (pipes) between the points and calculate distances.
-4. Remove points or lines.
+4. Measure the width and height of the selected region.
+5. Remove points or lines.
 """)
 
 # Set the starting location and zoom to the Netherlands
@@ -26,13 +27,46 @@ m = folium.Map(location=default_location, zoom_start=zoom_start)
 tile_url = "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
 folium.TileLayer(tiles=tile_url, attr='Mapbox').add_to(m)
 
-# List to store the points (facilities)
+# Add drawing tool for selecting a region on the map (rectangle)
+draw = folium.plugins.Draw(export=True, draw_options={'rectangle': True, 'polyline': False, 'polygon': False, 'circle': False})
+draw.add_to(m)
+
+# Store selected points and lines
 points = []
 lines = []
 distances = []
 
 # Sidebar to manage the map interactions
 st.sidebar.title("Map Interactions")
+
+# Define a place for storing selected region bounds
+selected_region_bounds = st.sidebar.text_area("Selected Region Bounds", "No region selected yet")
+region_dimensions = st.sidebar.text_area("Region Dimensions", "Width and Height not calculated yet")
+
+# Render the map
+output = st_folium(m, width=725)
+
+# Function to calculate geodesic distance between two points (for both lines and area dimensions)
+def calculate_distance(coord1, coord2):
+    return geodesic(coord1, coord2).meters
+
+# Check if a rectangle (region) was drawn
+if output and output['all_drawings']:
+    for shape in output['all_drawings']:
+        if shape['geometry']['type'] == 'Polygon':
+            coords = shape['geometry']['coordinates'][0]
+            sw_corner = coords[0]  # Southwest corner
+            ne_corner = coords[2]  # Northeast corner
+
+            selected_region_bounds = f"SW: {sw_corner} NE: {ne_corner}"
+            st.sidebar.success(f"Region selected: {selected_region_bounds}")
+
+            # Calculate real-world dimensions (width and height)
+            width = calculate_distance((sw_corner[1], sw_corner[0]), (ne_corner[1], sw_corner[0]))
+            height = calculate_distance((sw_corner[1], sw_corner[0]), (sw_corner[1], ne_corner[0]))
+
+            region_dimensions = f"Width: {width:.2f} meters, Height: {height:.2f} meters"
+            st.sidebar.success(f"Region Dimensions: {region_dimensions}")
 
 # Place points within the selected region
 latitude = st.sidebar.number_input("Latitude", value=default_location[0])
@@ -46,22 +80,15 @@ if st.sidebar.button("Place Facility"):
 
 # Allow user to connect points with lines (pipes)
 if len(points) > 1:
-    st.sidebar.subheader("Select Points to Connect")
     start_index = st.sidebar.selectbox("Select Starting Point", range(1, len(points) + 1))
     end_index = st.sidebar.selectbox("Select Ending Point", range(1, len(points) + 1))
-    
     if st.sidebar.button("Connect Points"):
         start_point = points[start_index - 1]
         end_point = points[end_index - 1]
-        
-        # Draw line between points
         folium.PolyLine(locations=[start_point, end_point], color="blue", weight=2.5).add_to(m)
-        
-        # Calculate distance
-        distance = geodesic(start_point, end_point).meters
+        distance = calculate_distance(start_point, end_point)
         distances.append(distance)
         lines.append([start_point, end_point])
-        
         st.sidebar.write(f"Distance between Point {start_index} and Point {end_index}: {distance:.2f} meters")
 
 # Display all pipe distances
