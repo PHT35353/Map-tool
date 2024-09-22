@@ -31,7 +31,14 @@ longitude = st.sidebar.number_input("Longitude", value=default_location[1])
 if st.sidebar.button("Search Location"):
     default_location = [latitude, longitude]
 
-# Create a Folium map with Mapbox Satellite layer (for interactive map controls)
+# Store points and lines
+points = []
+point_names = []
+point_colors = []
+lines = []
+total_pipe_length = 0
+
+# Create the map
 m = folium.Map(location=default_location, zoom_start=zoom_start)
 
 # Add Mapbox Satellite layer (replace this with your valid token)
@@ -55,13 +62,6 @@ draw.add_to(m)
 # Function to calculate the geodesic distance between two points
 def calculate_distance(coord1, coord2):
     return geodesic(coord1, coord2).meters
-
-# Store points, lines, and pipe lengths
-points = []
-point_names = []
-point_colors = []
-lines = []
-total_pipe_length = 0
 
 # Render the map and handle the drawings
 output = st_folium(m, width=725, height=500)
@@ -133,9 +133,9 @@ for coords in lines:
         weight=3
     ).add_to(m)
 
-# Update the map with the new markers and lines
-st_folium(m, width=725, height=500)
-
 # Display the total pipe length in the sidebar
 st.sidebar.subheader("Total Pipe Length")
 st.sidebar.write(f"{total_pipe_length:.2f} meters")
+
+# Render the updated map
+st_folium(m, width=725, height=500)
