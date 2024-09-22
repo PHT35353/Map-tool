@@ -59,7 +59,7 @@ def calculate_distance(coord1, coord2):
 # Sidebar inputs for customizing the shapes and lines
 st.sidebar.header("Customize Shapes and Lines")
 selected_shape = st.sidebar.selectbox("Select shape type", ["Rectangle", "Line", "Marker"])
-custom_name = st.sidebar.text_input(f"Enter {selected_shape} name")
+custom_name = st.sidebar.text_input(f"Enter {selected_shape} name", f"New {selected_shape}")
 custom_color = st.sidebar.color_picker(f"Choose {selected_shape} color", "#ff0000")
 
 # Store points, lines, and pipe lengths
@@ -134,3 +134,6 @@ if output and output['all_drawings']:
 # Display the total pipe length in the sidebar
 st.sidebar.subheader("Total Pipe Length")
 st.sidebar.write(f"{total_pipe_length:.2f} meters")
+
+# Render the updated map after drawing
+st_folium(m, width=725, height=500)
