@@ -5,14 +5,14 @@ from geopy.distance import geodesic
 from folium import plugins
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Customizable Circle Markers and Red Lines")
+st.title("Interactive Map Tool with Customizable Shapes and Lines")
 
 # Add instructions
 st.markdown("""
 This tool allows you to:
-1. Select an area of the map by drawing a rectangle.
+1. Select an area of the map by drawing a rectangle and customizing its name and color.
 2. Place Circle Markers (with custom names and colors) within the selected area.
-3. Draw lines (pipes) between Circle Markers, where all lines are red.
+3. Draw lines (pipes) between Circle Markers with customizable names and colors. Each line will display its length.
 4. Search for a location by entering latitude and longitude (in the sidebar).
 """)
 
@@ -42,10 +42,10 @@ folium.TileLayer(tiles=tile_url, attr='Mapbox').add_to(m)
 draw = plugins.Draw(
     export=True,  # Allow exporting shapes as GeoJSON
     draw_options={
-        'polyline': {'shapeOptions': {'color': 'red', 'weight': 3}},  # All lines (pipes) will be red
+        'polyline': {'shapeOptions': {'color': 'red', 'weight': 3}},  # Default color for lines (pipes)
         'polygon': False,
         'circle': False,
-        'rectangle': {'shapeOptions': {'color': 'green', 'weight': 2}},  # Allow drawing a rectangle (area selection)
+        'rectangle': {'shapeOptions': {'color': 'green', 'weight': 2}},  # Default color for rectangles
         'circlemarker': {'repeatMode': True},  # Enable Circle Marker for point placement
     },
     edit_options={'edit': False}  # Disable edit functionality for simplicity
@@ -59,77 +59,68 @@ def calculate_distance(coord1, coord2):
 # Store points, lines, and pipe lengths
 points = []
 lines = []
+rectangles = []
 total_pipe_length = 0
-
-# Function to update the marker with the custom name and color
-def create_marker(lat, lng, name="Marker", color="blue"):
-    return folium.CircleMarker(
-        location=[lat, lng],
-        radius=8,
-        color=color,
-        fill=True,
-        fill_color=color,
-        fill_opacity=0.7,
-        popup=name
-    )
-
-# HTML form for the popup to input names and colors for Circle Markers
-def marker_popup_form(lat, lng, marker_id):
-    return f"""
-    <form id="marker_form_{marker_id}">
-        <label for="name">Point Name:</label><br>
-        <input type="text" id="name" value="New Point"><br>
-        <label for="color">Point Color:</label><br>
-        <input type="color" id="color" value="#ff0000"><br>
-        <input type="button" value="Submit" onclick="updateMarker({marker_id}, {lat}, {lng})">
-    </form>
-    <script>
-    function updateMarker(id, lat, lng) {{
-        var name = document.getElementById('marker_form_' + id).elements['name'].value;
-        var color = document.getElementById('marker_form_' + id).elements['color'].value;
-        window.parent.postMessage({{'id': id, 'name': name, 'color': color, 'lat': lat, 'lng': lng}}, '*');
-    }}
-    </script>
-    """
 
 # Render the map and handle the drawings
 output = st_folium(m, width=725, height=500)
 
 # Check if any drawings were made
 if output and output['all_drawings']:
-    for shape in output['all_drawings']:
+    for idx, shape in enumerate(output['all_drawings']):
         if shape['geometry']['type'] == 'Polygon':  # Rectangle drawn (region selection)
             coords = shape['geometry']['coordinates'][0]
             sw_corner = coords[0]  # Southwest corner
             ne_corner = coords[2]  # Northeast corner
 
-            # Calculate real-world dimensions of the selected rectangle
+            # Sidebar customization for this specific rectangle
+            st.sidebar.subheader(f"Customize Rectangle {idx + 1}")
+            rectangle_name = st.sidebar.text_input(f"Enter name for Rectangle {idx + 1}", f"Rectangle {idx + 1}")
+            rectangle_color = st.sidebar.color_picker(f"Choose color for Rectangle {idx + 1}", "#00ff00")
+
+            # Calculate the real-world dimensions of the selected rectangle
             width = calculate_distance((sw_corner[1], sw_corner[0]), (ne_corner[1], sw_corner[0]))
             height = calculate_distance((sw_corner[1], sw_corner[0]), (sw_corner[1], ne_corner[0]))
 
-            st.sidebar.success(f"Selected Region Dimensions: Width = {width:.2f} meters, Height = {height:.2f} meters")
-            st.sidebar.info("Now, you can place points within the selected area.")
+            # Add rectangle with custom name and color
+            folium.Rectangle(
+                bounds=[(sw_corner[1], sw_corner[0]), (ne_corner[1], ne_corner[0])],
+                color=rectangle_color,
+                fill=True,
+                fill_opacity=0.5,
+                popup=rectangle_name
+            ).add_to(m)
+            st.sidebar.success(f"Rectangle {rectangle_name} drawn: Width = {width:.2f} meters, Height = {height:.2f} meters")
 
         elif shape['geometry']['type'] == 'Point':  # Point (circle marker) placed
             lat = shape['geometry']['coordinates'][1]
             lng = shape['geometry']['coordinates'][0]
             
-            # Unique marker ID for identifying the specific marker
-            marker_id = len(points) + 1
+            # Sidebar customization for this specific marker
+            st.sidebar.subheader(f"Customize Marker {idx + 1}")
+            marker_name = st.sidebar.text_input(f"Enter name for Marker {idx + 1}", f"Marker {idx + 1}")
+            marker_color = st.sidebar.color_picker(f"Choose color for Marker {idx + 1}", "#0000ff")
 
-            # Add the initial Circle Marker with the popup to customize name and color
+            # Add the Circle Marker with the popup to customize name and color
             folium.CircleMarker(
                 location=[lat, lng],
                 radius=8,
                 fill=True,
                 fill_opacity=0.7,
-                popup=folium.Popup(marker_popup_form(lat, lng, marker_id), max_width=300)
+                color=marker_color,
+                fill_color=marker_color,
+                popup=marker_name
             ).add_to(m)
             points.append((lat, lng))
 
         elif shape['geometry']['type'] == 'LineString':  # Line drawn (pipe)
             coords = shape['geometry']['coordinates']
             pipe_length = 0
+
+            # Sidebar customization for this specific line
+            st.sidebar.subheader(f"Customize Line {idx + 1}")
+            line_name = st.sidebar.text_input(f"Enter name for Line {idx + 1}", f"Line {idx + 1}")
+            line_color = st.sidebar.color_picker(f"Choose color for Line {idx + 1}", "#ff0000")
 
             # Calculate the total distance of the pipe (sum of segment distances)
             for i in range(len(coords) - 1):
@@ -140,11 +131,12 @@ if output and output['all_drawings']:
 
             total_pipe_length += pipe_length
 
-            # Draw the line with a fixed red color
+            # Draw the line with custom color and show distance
             folium.PolyLine(
                 locations=[(coord[1], coord[0]) for coord in coords],
-                color="red",  # All lines (pipes) are red
+                color=line_color,  # Custom color selected
                 weight=3,
+                popup=f"{line_name}: {pipe_length:.2f} meters"
             ).add_to(m)
             lines.append(coords)
 
@@ -152,3 +144,5 @@ if output and output['all_drawings']:
 st.sidebar.subheader("Total Pipe Length")
 st.sidebar.write(f"{total_pipe_length:.2f} meters")
 
+# Render the updated map
+st_folium(m, width=725, height=500)
