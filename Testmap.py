@@ -5,15 +5,15 @@ from geopy.distance import geodesic
 from folium import plugins
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Customizable Circle Markers and Pipes")
+st.title("Interactive Map Tool with Customizable Markers and Pipes")
 
 # Add instructions
 st.markdown("""
 This tool allows you to:
 1. Select an area of the map by drawing a rectangle.
-2. Place Circle Markers (with names and colors) interactively within the selected area.
-3. Draw lines (pipes) between Circle Markers and calculate real-world distances.
-4. Search for a location by entering latitude and longitude (in sidebar).
+2. Place Circle Markers (with custom names and colors) within the selected area.
+3. Draw lines (pipes) between Circle Markers and customize their names and colors.
+4. Search for a location by entering latitude and longitude (in the sidebar).
 """)
 
 # Set the starting location and zoom to the Netherlands
@@ -61,35 +61,36 @@ points = []
 lines = []
 total_pipe_length = 0
 
-# JavaScript for the popups to handle names and colors directly on the map
+# JavaScript for popups to capture names and colors directly from the form
 popup_js = """
 <script>
-function getInputValue() {
+function submitForm(event) {
+    event.preventDefault();  // Prevent form submission
     var name = document.getElementById('name').value;
     var color = document.getElementById('color').value;
-    return [name, color];
+    window.nameColor = [name, color];  // Store name and color globally
 }
 </script>
 """
 
-# HTML form for the popup to input name and color
+# HTML form for the popup to input names and colors for points and lines
 popup_html_point = """
-<form>
+<form onsubmit="submitForm(event)">
     <label for="name">Point Name:</label><br>
     <input type="text" id="name" value="New Point"><br>
     <label for="color">Point Color:</label><br>
     <input type="color" id="color" value="#ff0000"><br>
-    <input type="submit" value="Submit" onclick="getInputValue()">
+    <input type="submit" value="Submit">
 </form>
 """
 
 popup_html_line = """
-<form>
+<form onsubmit="submitForm(event)">
     <label for="name">Line Name:</label><br>
     <input type="text" id="name" value="New Line"><br>
     <label for="color">Line Color:</label><br>
     <input type="color" id="color" value="#0000ff"><br>
-    <input type="submit" value="Submit" onclick="getInputValue()">
+    <input type="submit" value="Submit">
 </form>
 """
 
@@ -116,19 +117,14 @@ if output and output['all_drawings']:
             lng = shape['geometry']['coordinates'][0]
             
             # Popup for naming the point and selecting its color
-            point_name = f"Point {len(points) + 1}"
-            color = "red"  # Default color for circle markers
             folium.CircleMarker(
                 location=[lat, lng],
                 radius=8,
-                color=color,
                 fill=True,
-                fill_color=color,
                 fill_opacity=0.7,
-                popup=folium.Popup(popup_html_point, max_width=300)
+                popup=folium.Popup(f"{popup_html_point}{popup_js}", max_width=300)
             ).add_to(m)
-            points.append((lat, lng, point_name))
-            st.success(f"Placed Circle Marker named '{point_name}'.")
+            points.append((lat, lng))
 
         elif shape['geometry']['type'] == 'LineString':  # Line drawn (pipe)
             coords = shape['geometry']['coordinates']
@@ -142,18 +138,14 @@ if output and output['all_drawings']:
                 pipe_length += segment_length
 
             total_pipe_length += pipe_length
-            line_name = f"Line {len(lines) + 1}"
-            line_color = "blue"  # Default color for lines
             folium.PolyLine(
                 locations=[(coord[1], coord[0]) for coord in coords],
-                color=line_color,
+                color="blue",  # Default color for lines
                 weight=3,
-                tooltip=line_name,
-                popup=folium.Popup(popup_html_line, max_width=300)
+                popup=folium.Popup(f"{popup_html_line}{popup_js}", max_width=300)
             ).add_to(m)
-            lines.append((coords, line_name))
-            st.success(f"Drawn line '{line_name}' with a length of {pipe_length:.2f} meters.")
+            lines.append(coords)
 
-# Display the total pipe length in Streamlit
+# Display the total pipe length in the sidebar
 st.sidebar.subheader("Total Pipe Length")
 st.sidebar.write(f"{total_pipe_length:.2f} meters")
