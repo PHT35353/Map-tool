@@ -27,7 +27,7 @@ map_data = st_folium(m, width=700, height=500)
 # Allow user to select dots (places)
 if map_data and map_data['last_clicked']:
     last_click = map_data['last_clicked']
-    lat, lon = last_click['lat'], lon = last_click['lng']
+    lat, lon = last_click['lat'], last_click['lng']
     
     # Append the selected point
     selected_points.append((lat, lon))
@@ -64,20 +64,21 @@ if len(selected_points) > 1:
 # Re-render the map with new markers and lines
 st_folium(m, width=700, height=500)
 
-# Display the width and height of the selected area (bounding box)
-if map_data and 'bounds' in map_data and map_data['bounds']:
+# Check if bounds exist before accessing them
+if map_data and 'bounds' in map_data:
     bounds = map_data['bounds']
-    north_east = bounds['northeast']
-    south_west = bounds['southwest']
+    
+    # Ensure 'northeast' and 'southwest' keys exist in bounds
+    if 'northeast' in bounds and 'southwest' in bounds:
+        north_east = bounds['northeast']
+        south_west = bounds['southwest']
 
-    # Calculate the width and height of the bounding box in meters
-    width = geodesic((north_east['lat'], south_west['lng']), (north_east['lat'], north_east['lng'])).meters
-    height = geodesic((north_east['lat'], south_west['lng']), (south_west['lat'], south_west['lng'])).meters
+        # Calculate the width and height of the bounding box in meters
+        width = geodesic((north_east['lat'], south_west['lng']), (north_east['lat'], north_east['lng'])).meters
+        height = geodesic((north_east['lat'], south_west['lng']), (south_west['lat'], south_west['lng'])).meters
 
-    st.write(f"Selected Area: Width = {width:.2f} meters, Height = {height:.2f} meters")
-
-# List all the pipe connections and their distances
-if line_segments:
-    st.write("Pipe Connections and Distances:")
-    for idx, (p1, p2, dist) in enumerate(line_segments):
-        st.write(f"Pipe {idx + 1}: From {p1} to {p2}, Distance: {dist:.2f} meters")
+        st.write(f"Selected Area: Width = {width:.2f} meters, Height = {height:.2f} meters")
+    else:
+        st.write("Bounds information is incomplete. Please try selecting the area again.")
+else:
+    st.write("No bounds selected. Please interact with the map to select an area.")
