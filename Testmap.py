@@ -5,14 +5,14 @@ from geopy.distance import geodesic
 from folium import plugins
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Customizable Markers and Pipes")
+st.title("Interactive Map Tool with Customizable Circle Markers and Red Lines")
 
 # Add instructions
 st.markdown("""
 This tool allows you to:
 1. Select an area of the map by drawing a rectangle.
 2. Place Circle Markers (with custom names and colors) within the selected area.
-3. Draw lines (pipes) between Circle Markers and customize their names and colors.
+3. Draw lines (pipes) between Circle Markers, where all lines are red.
 4. Search for a location by entering latitude and longitude (in the sidebar).
 """)
 
@@ -42,7 +42,7 @@ folium.TileLayer(tiles=tile_url, attr='Mapbox').add_to(m)
 draw = plugins.Draw(
     export=True,  # Allow exporting shapes as GeoJSON
     draw_options={
-        'polyline': {'shapeOptions': {'color': 'blue', 'weight': 3}},  # Allow drawing lines (pipes)
+        'polyline': {'shapeOptions': {'color': 'red', 'weight': 3}},  # All lines (pipes) will be red
         'polygon': False,
         'circle': False,
         'rectangle': {'shapeOptions': {'color': 'green', 'weight': 2}},  # Allow drawing a rectangle (area selection)
@@ -61,40 +61,38 @@ points = []
 lines = []
 total_pipe_length = 0
 
-# JavaScript for popups to capture names and colors directly from the form
-popup_js = """
-<script>
-function submitForm(event) {
-    event.preventDefault();  // Prevent form submission
-    var name = document.getElementById('name').value;
-    var color = document.getElementById('color').value;
-    window.nameColor = [name, color];  // Store name and color globally
-}
-</script>
-"""
+# Function to update the marker with the custom name and color
+def create_marker(lat, lng, name="Marker", color="blue"):
+    return folium.CircleMarker(
+        location=[lat, lng],
+        radius=8,
+        color=color,
+        fill=True,
+        fill_color=color,
+        fill_opacity=0.7,
+        popup=name
+    )
 
-# HTML form for the popup to input names and colors for points and lines
-popup_html_point = """
-<form onsubmit="submitForm(event)">
-    <label for="name">Point Name:</label><br>
-    <input type="text" id="name" value="New Point"><br>
-    <label for="color">Point Color:</label><br>
-    <input type="color" id="color" value="#ff0000"><br>
-    <input type="submit" value="Submit">
-</form>
-"""
+# HTML form for the popup to input names and colors for Circle Markers
+def marker_popup_form(lat, lng, marker_id):
+    return f"""
+    <form id="marker_form_{marker_id}">
+        <label for="name">Point Name:</label><br>
+        <input type="text" id="name" value="New Point"><br>
+        <label for="color">Point Color:</label><br>
+        <input type="color" id="color" value="#ff0000"><br>
+        <input type="button" value="Submit" onclick="updateMarker({marker_id}, {lat}, {lng})">
+    </form>
+    <script>
+    function updateMarker(id, lat, lng) {{
+        var name = document.getElementById('marker_form_' + id).elements['name'].value;
+        var color = document.getElementById('marker_form_' + id).elements['color'].value;
+        window.parent.postMessage({{'id': id, 'name': name, 'color': color, 'lat': lat, 'lng': lng}}, '*');
+    }}
+    </script>
+    """
 
-popup_html_line = """
-<form onsubmit="submitForm(event)">
-    <label for="name">Line Name:</label><br>
-    <input type="text" id="name" value="New Line"><br>
-    <label for="color">Line Color:</label><br>
-    <input type="color" id="color" value="#0000ff"><br>
-    <input type="submit" value="Submit">
-</form>
-"""
-
-# Handle points and lines dynamically
+# Render the map and handle the drawings
 output = st_folium(m, width=725, height=500)
 
 # Check if any drawings were made
@@ -116,13 +114,16 @@ if output and output['all_drawings']:
             lat = shape['geometry']['coordinates'][1]
             lng = shape['geometry']['coordinates'][0]
             
-            # Popup for naming the point and selecting its color
+            # Unique marker ID for identifying the specific marker
+            marker_id = len(points) + 1
+
+            # Add the initial Circle Marker with the popup to customize name and color
             folium.CircleMarker(
                 location=[lat, lng],
                 radius=8,
                 fill=True,
                 fill_opacity=0.7,
-                popup=folium.Popup(f"{popup_html_point}{popup_js}", max_width=300)
+                popup=folium.Popup(marker_popup_form(lat, lng, marker_id), max_width=300)
             ).add_to(m)
             points.append((lat, lng))
 
@@ -138,11 +139,12 @@ if output and output['all_drawings']:
                 pipe_length += segment_length
 
             total_pipe_length += pipe_length
+
+            # Draw the line with a fixed red color
             folium.PolyLine(
                 locations=[(coord[1], coord[0]) for coord in coords],
-                color="blue",  # Default color for lines
+                color="red",  # All lines (pipes) are red
                 weight=3,
-                popup=folium.Popup(f"{popup_html_line}{popup_js}", max_width=300)
             ).add_to(m)
             lines.append(coords)
 
