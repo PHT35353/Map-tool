@@ -4,14 +4,14 @@ from streamlit_folium import st_folium
 from geopy.distance import geodesic
 
 # Set up a title for the app
-st.title("Map-Based Piping Layout Tool with Accurate Pipe Length Calculation")
+st.title("Interactive Map Tool with Points and Customizable Lines")
 
 # Add instructions
 st.markdown("""
 This tool allows you to:
 1. Select an area of the map by drawing a rectangle (region selection).
-2. Place points (representing facilities) within the selected region.
-3. Draw lines (pipes) and calculate real-world distances.
+2. Place points interactively by clicking on the map within the selected area.
+3. Draw lines (pipes) between the points and calculate real-world distances.
 4. Customize the colors and names of both points and lines.
 5. Search for a location by entering latitude and longitude.
 """)
@@ -49,22 +49,12 @@ draw.add_to(m)
 def calculate_distance(coord1, coord2):
     return geodesic(coord1, coord2).meters
 
-# Function to add a point (site) with customizable color and name
-def add_point(lat, lng, name, color):
-    folium.Marker(location=[lat, lng], popup=name, icon=folium.Icon(color=color)).add_to(m)
-
-# Function to draw a line (pipe) with customizable color and name
-def draw_line(coords, name, color):
-    folium.PolyLine(locations=coords, color=color, tooltip=name, weight=3).add_to(m)
-
 # Store total pipe length
 total_pipe_length = 0
 
-# List to store points (sites)
+# List to store points (sites) and lines (pipes)
 points = []
-
-# Render the map and handle the drawings (rectangles and lines)
-output = st_folium(m, width=725, height=500)
+lines = []
 
 # Color options for lines and points
 color_options = ["red", "blue", "green", "purple", "orange", "darkred", "lightred", "darkblue", "darkgreen"]
@@ -79,6 +69,17 @@ st.sidebar.subheader("Line (Pipe) Options")
 line_name = st.sidebar.text_input("Enter Line Name")
 line_color = st.sidebar.selectbox("Select Line Color", color_options)
 
+# Function to add a point with customizable color and name
+def add_point(lat, lng, name, color):
+    folium.Marker(location=[lat, lng], popup=name, icon=folium.Icon(color=color)).add_to(m)
+
+# Function to draw a line with customizable color and name
+def draw_line(coords, name, color):
+    folium.PolyLine(locations=coords, color=color, tooltip=name, weight=3).add_to(m)
+
+# Render the map and handle the drawings (rectangles and lines)
+output = st_folium(m, width=725, height=500)
+
 # Check if any drawings were made (rectangles or lines)
 if output and output['all_drawings']:
     for shape in output['all_drawings']:
@@ -92,32 +93,34 @@ if output and output['all_drawings']:
             height = calculate_distance((sw_corner[1], sw_corner[0]), (sw_corner[1], ne_corner[0]))
 
             st.sidebar.success(f"Region Dimensions: Width: {width:.2f} meters, Height: {height:.2f} meters")
+            st.sidebar.info("Click on the map to place points within the selected area.")
 
-            # Add a point (site) inside the selected area (use center point)
-            mid_lat = (sw_corner[1] + ne_corner[1]) / 2
-            mid_lng = (sw_corner[0] + ne_corner[0]) / 2
-            add_point(mid_lat, mid_lng, point_name, point_color)
-            points.append((mid_lat, mid_lng, point_name, point_color))
+# Handle point placement by clicking on the map
+if output and output['last_clicked']:
+    click_location = output['last_clicked']
+    lat, lng = click_location['lat'], click_location['lng']
+    points.append((lat, lng, point_name, point_color))
+    add_point(lat, lng, point_name, point_color)
+    st.success(f"Placed point at ({lat:.5f}, {lng:.5f}) with name '{point_name}' and color '{point_color}'.")
 
-        elif shape['geometry']['type'] == 'LineString':  # Line drawn (pipe)
-            coords = shape['geometry']['coordinates']
-            pipe_length = 0
-            # Calculate the total distance of the pipe (sum of segment distances)
-            for i in range(len(coords) - 1):
-                start = (coords[i][1], coords[i][0])  # Lat, Lng
-                end = (coords[i+1][1], coords[i+1][0])  # Lat, Lng
-                segment_length = calculate_distance(start, end)
-                pipe_length += segment_length
-            
-            total_pipe_length += pipe_length
-            draw_line(coords, line_name, line_color)
-            st.sidebar.success(f"Pipe Length: {pipe_length:.2f} meters")
+# Allow user to connect points with lines (pipes) and calculate distance
+if len(points) > 1:
+    start_index = st.sidebar.selectbox("Select Starting Point", range(1, len(points) + 1))
+    end_index = st.sidebar.selectbox("Select Ending Point", range(1, len(points) + 1))
+    if st.sidebar.button("Connect Points"):
+        start_point = points[start_index - 1]
+        end_point = points[end_index - 1]
+        line_coords = [(start_point[0], start_point[1]), (end_point[0], end_point[1])]
+        draw_line(line_coords, line_name, line_color)
+        line_distance = calculate_distance((start_point[0], start_point[1]), (end_point[0], end_point[1]))
+        total_pipe_length += line_distance
+        st.sidebar.write(f"Distance between '{start_point[2]}' and '{end_point[2]}': {line_distance:.2f} meters")
 
-# Display the total pipe length in the sidebar
+# Display total pipe length in the sidebar
 st.sidebar.subheader("Total Pipe Length")
 st.sidebar.write(f"{total_pipe_length:.2f} meters")
 
-# Display all points (sites) in the sidebar
-st.sidebar.subheader("Placed Points (Sites)")
+# Display all placed points in the sidebar
+st.sidebar.subheader("Placed Points")
 for i, point in enumerate(points, start=1):
     st.sidebar.write(f"{i}. {point[2]} (Color: {point[3]}, Location: {point[0]:.5f}, {point[1]:.5f})")
