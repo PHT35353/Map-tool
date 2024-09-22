@@ -21,7 +21,7 @@ default_location = [52.3676, 4.9041]  # Amsterdam, Netherlands
 zoom_start = 13
 
 # Sidebar to manage the map interactions
-st.sidebar.title("Search by Coordinates")
+st.sidebar.title("Map Controls")
 
 # Search for a location by Latitude and Longitude
 latitude = st.sidebar.number_input("Latitude", value=default_location[0])
@@ -56,46 +56,17 @@ draw.add_to(m)
 def calculate_distance(coord1, coord2):
     return geodesic(coord1, coord2).meters
 
-# Store points, lines, and pipe lengths
+# Store points and lines
 points = []
+point_names = []
+point_colors = []
 lines = []
 total_pipe_length = 0
-
-# Function to update the marker with the custom name and color
-def create_marker(lat, lng, name="Marker", color="blue"):
-    return folium.CircleMarker(
-        location=[lat, lng],
-        radius=8,
-        color=color,
-        fill=True,
-        fill_color=color,
-        fill_opacity=0.7,
-        popup=name
-    )
-
-# HTML form for the popup to input names and colors for Circle Markers
-def marker_popup_form(lat, lng, marker_id):
-    return f"""
-    <form id="marker_form_{marker_id}">
-        <label for="name">Point Name:</label><br>
-        <input type="text" id="name" value="New Point"><br>
-        <label for="color">Point Color:</label><br>
-        <input type="color" id="color" value="#ff0000"><br>
-        <input type="button" value="Submit" onclick="updateMarker({marker_id}, {lat}, {lng})">
-    </form>
-    <script>
-    function updateMarker(id, lat, lng) {{
-        var name = document.getElementById('marker_form_' + id).elements['name'].value;
-        var color = document.getElementById('marker_form_' + id).elements['color'].value;
-        window.parent.postMessage({{'id': id, 'name': name, 'color': color, 'lat': lat, 'lng': lng}}, '*');
-    }}
-    </script>
-    """
 
 # Render the map and handle the drawings
 output = st_folium(m, width=725, height=500)
 
-# Check if any drawings were made
+# Process any new drawings on the map
 if output and output['all_drawings']:
     for shape in output['all_drawings']:
         if shape['geometry']['type'] == 'Polygon':  # Rectangle drawn (region selection)
@@ -110,22 +81,12 @@ if output and output['all_drawings']:
             st.sidebar.success(f"Selected Region Dimensions: Width = {width:.2f} meters, Height = {height:.2f} meters")
             st.sidebar.info("Now, you can place points within the selected area.")
 
-        elif shape['geometry']['type'] == 'Point':  # Point (circle marker) placed
+        elif shape['geometry']['type'] == 'Point':  # Circle Marker placed
             lat = shape['geometry']['coordinates'][1]
             lng = shape['geometry']['coordinates'][0]
-            
-            # Unique marker ID for identifying the specific marker
-            marker_id = len(points) + 1
-
-            # Add the initial Circle Marker with the popup to customize name and color
-            folium.CircleMarker(
-                location=[lat, lng],
-                radius=8,
-                fill=True,
-                fill_opacity=0.7,
-                popup=folium.Popup(marker_popup_form(lat, lng, marker_id), max_width=300)
-            ).add_to(m)
-            points.append((lat, lng))
+            points.append((lat, lng))  # Save marker coordinates
+            point_names.append(f"Marker {len(points)}")  # Assign a default name
+            point_colors.append("#3388ff")  # Default blue color
 
         elif shape['geometry']['type'] == 'LineString':  # Line drawn (pipe)
             coords = shape['geometry']['coordinates']
@@ -139,14 +100,41 @@ if output and output['all_drawings']:
                 pipe_length += segment_length
 
             total_pipe_length += pipe_length
-
-            # Draw the line with a fixed red color
-            folium.PolyLine(
-                locations=[(coord[1], coord[0]) for coord in coords],
-                color="red",  # All lines (pipes) are red
-                weight=3,
-            ).add_to(m)
             lines.append(coords)
+
+# Sidebar for modifying Circle Markers (name and color)
+if len(points) > 0:
+    st.sidebar.subheader("Modify Markers")
+    marker_idx = st.sidebar.selectbox("Select Marker", range(1, len(points) + 1))
+    new_name = st.sidebar.text_input("Marker Name", value=point_names[marker_idx - 1])
+    new_color = st.sidebar.color_picker("Marker Color", value=point_colors[marker_idx - 1])
+
+    # Update the selected marker's name and color
+    point_names[marker_idx - 1] = new_name
+    point_colors[marker_idx - 1] = new_color
+
+    # Recreate the map with updated markers
+    for i, (lat, lng) in enumerate(points):
+        folium.CircleMarker(
+            location=[lat, lng],
+            radius=8,
+            color=point_colors[i],
+            fill=True,
+            fill_color=point_colors[i],
+            fill_opacity=0.7,
+            popup=point_names[i]
+        ).add_to(m)
+
+# Recreate all the lines (which are always red)
+for coords in lines:
+    folium.PolyLine(
+        locations=[(coord[1], coord[0]) for coord in coords],
+        color="red",  # All lines are red
+        weight=3
+    ).add_to(m)
+
+# Update the map with the new markers and lines
+st_folium(m, width=725, height=500)
 
 # Display the total pipe length in the sidebar
 st.sidebar.subheader("Total Pipe Length")
