@@ -5,18 +5,18 @@ from geopy.distance import geodesic
 from folium import plugins
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Customizable Points and Lines")
+st.title("Interactive Map Tool with Customizable Circle Markers and Pipes")
 
 # Add instructions
 st.markdown("""
 This tool allows you to:
 1. Select an area of the map by drawing a rectangle.
-2. Place points (with names and colors) interactively within the selected area.
-3. Draw lines (pipes) between points and calculate real-world distances.
+2. Place Circle Markers (with names and colors) interactively within the selected area.
+3. Draw lines (pipes) between Circle Markers and calculate real-world distances.
 4. Search for a location by entering latitude and longitude (in sidebar).
 """)
 
-# Set the starting location and zoom to the Netherlands
+# Set the starting location and zoom to the Netherlands (this is only for initial map view)
 default_location = [52.3676, 4.9041]  # Amsterdam, Netherlands
 zoom_start = 13
 
@@ -31,14 +31,14 @@ longitude = st.sidebar.number_input("Longitude", value=default_location[1])
 if st.sidebar.button("Search Location"):
     default_location = [latitude, longitude]
 
-# Create a Folium map with Mapbox Satellite layer
+# Create a Folium map with Mapbox Satellite layer (for interactive map controls)
 m = folium.Map(location=default_location, zoom_start=zoom_start)
 
 # Add Mapbox Satellite layer (replace this with your valid token)
 tile_url = "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
 folium.TileLayer(tiles=tile_url, attr='Mapbox').add_to(m)
 
-# Add drawing tool for selecting a region, placing points, and drawing lines
+# Add drawing tool for selecting a region, placing circle markers, and drawing lines
 draw = plugins.Draw(
     export=True,  # Allow exporting shapes as GeoJSON
     draw_options={
@@ -46,7 +46,7 @@ draw = plugins.Draw(
         'polygon': False,
         'circle': False,
         'rectangle': {'shapeOptions': {'color': 'green', 'weight': 2}},  # Allow drawing a rectangle (area selection)
-        'marker': {'icon': 'glyphicon glyphicon-map-marker'},  # Allow placing markers (points)
+        'circlemarker': {'repeatMode': True},  # Enable Circle Marker for point placement
     },
     edit_options={'edit': False}  # Disable edit functionality for simplicity
 )
@@ -61,49 +61,42 @@ points = []
 lines = []
 total_pipe_length = 0
 
+# Render the map and handle the drawings
+output = st_folium(m, width=725, height=500)
+
 # JavaScript for the popups to handle names and colors directly on the map
 popup_js = """
 <script>
 function getInputValue() {
-    var pointName = document.getElementById('pointName').value;
-    var pointColor = document.getElementById('pointColor').value;
-    return [pointName, pointColor];
+    var name = document.getElementById('name').value;
+    var color = document.getElementById('color').value;
+    return [name, color];
 }
 </script>
 """
 
-# Store the HTML form for the popup to input name and color
-point_popup_html = """
+# HTML form for the popup to input name and color
+popup_html_point = """
 <form>
-    <label for="pointName">Point Name:</label><br>
-    <input type="text" id="pointName" value="New Point"><br>
-    <label for="pointColor">Point Color:</label><br>
-    <input type="color" id="pointColor" value="#ff0000"><br>
+    <label for="name">Point Name:</label><br>
+    <input type="text" id="name" value="New Point"><br>
+    <label for="color">Point Color:</label><br>
+    <input type="color" id="color" value="#ff0000"><br>
     <input type="submit" value="Submit" onclick="getInputValue()">
 </form>
 """
 
-line_popup_html = """
+popup_html_line = """
 <form>
-    <label for="lineName">Line Name:</label><br>
-    <input type="text" id="lineName" value="New Line"><br>
-    <label for="lineColor">Line Color:</label><br>
-    <input type="color" id="lineColor" value="#0000ff"><br>
+    <label for="name">Line Name:</label><br>
+    <input type="text" id="name" value="New Line"><br>
+    <label for="color">Line Color:</label><br>
+    <input type="color" id="color" value="#0000ff"><br>
     <input type="submit" value="Submit" onclick="getInputValue()">
 </form>
 """
-
-# Add the popup form to the map for interactive customization
-folium.Marker(
-    location=[default_location[0], default_location[1]], 
-    popup=folium.Popup(point_popup_html + popup_js),
-    icon=folium.Icon(color="blue")
-).add_to(m)
 
 # Handle points and lines dynamically
-output = st_folium(m, width=725, height=500)
-
-# Check if any drawings were made
 if output and output['all_drawings']:
     for shape in output['all_drawings']:
         if shape['geometry']['type'] == 'Polygon':  # Rectangle drawn (region selection)
@@ -118,16 +111,24 @@ if output and output['all_drawings']:
             st.sidebar.success(f"Selected Region Dimensions: Width = {width:.2f} meters, Height = {height:.2f} meters")
             st.sidebar.info("Now, you can place points within the selected area.")
 
-        elif shape['geometry']['type'] == 'Point':  # Point (marker) placed
+        elif shape['geometry']['type'] == 'Point':  # Point (circle marker) placed
             lat = shape['geometry']['coordinates'][1]
             lng = shape['geometry']['coordinates'][0]
             
             # Popup for naming the point and selecting its color
             point_name = f"Point {len(points) + 1}"
-            color = "red"  # Default color for points
-            folium.Marker(location=[lat, lng], popup=point_popup_html, icon=folium.Icon(color=color)).add_to(m)
+            color = "red"  # Default color for circle markers
+            folium.CircleMarker(
+                location=[lat, lng],
+                radius=8,
+                color=color,
+                fill=True,
+                fill_color=color,
+                fill_opacity=0.7,
+                popup=folium.Popup(popup_html_point + popup_js)
+            ).add_to(m)
             points.append((lat, lng, point_name))
-            st.success(f"Placed point at ({lat:.5f}, {lng:.5f}) named '{point_name}'.")
+            st.success(f"Placed Circle Marker at ({lat:.5f}, {lng:.5f}) named '{point_name}'.")
 
         elif shape['geometry']['type'] == 'LineString':  # Line drawn (pipe)
             coords = shape['geometry']['coordinates']
@@ -143,7 +144,13 @@ if output and output['all_drawings']:
             total_pipe_length += pipe_length
             line_name = f"Line {len(lines) + 1}"
             line_color = "blue"  # Default color for lines
-            folium.PolyLine(locations=[(coord[1], coord[0]) for coord in coords], color=line_color, weight=3, tooltip=line_name).add_to(m)
+            folium.PolyLine(
+                locations=[(coord[1], coord[0]) for coord in coords],
+                color=line_color,
+                weight=3,
+                tooltip=line_name,
+                popup=folium.Popup(popup_html_line + popup_js)
+            ).add_to(m)
             lines.append((coords, line_name))
             st.success(f"Drawn line '{line_name}' with a length of {pipe_length:.2f} meters.")
 
