@@ -52,7 +52,7 @@ def calculate_distance(coord1, coord2):
 total_pipe_length = 0
 
 # Render the map and handle the drawings (rectangles and lines)
-output = st_folium(m, width=725)
+output = st_folium(m, width=725, height=500)
 
 # Check if any drawings were made (rectangles or lines)
 if output and output['all_drawings']:
@@ -84,6 +84,3 @@ if output and output['all_drawings']:
 # Display the total pipe length in the sidebar
 st.sidebar.subheader("Total Pipe Length")
 st.sidebar.write(f"{total_pipe_length:.2f} meters")
-
-# Render the updated map in the Streamlit app
-st_data = st_folium(m, width=725)
