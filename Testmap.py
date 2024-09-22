@@ -2,7 +2,6 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 from geopy.distance import geodesic
-import math
 
 # Initialize the Streamlit app
 st.title("Map Tool for Pipe Design with Distance Calculation")
@@ -14,8 +13,9 @@ st.write("""
 3. Draw lines between these dots (pipes), and the tool will give the distances in real-world scale.
 """)
 
-# Create a base map centered at a default location
-m = folium.Map(location=[45.5236, -122.6750], zoom_start=13, tiles='Stamen Terrain')
+# Create a base map centered at a default location with proper attribution
+m = folium.Map(location=[45.5236, -122.6750], zoom_start=13, tiles='Stamen Terrain', 
+               attr="Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL.")
 
 # Initialize data storage for coordinates
 selected_points = []
@@ -27,7 +27,7 @@ map_data = st_folium(m, width=700, height=500)
 # Allow user to select dots (places)
 if map_data and map_data['last_clicked']:
     last_click = map_data['last_clicked']
-    lat, lon = last_click['lat'], last_click['lng']
+    lat, lon = last_click['lat'], lon = last_click['lng']
     
     # Append the selected point
     selected_points.append((lat, lon))
