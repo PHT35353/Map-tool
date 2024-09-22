@@ -56,7 +56,7 @@ draw.add_to(m)
 def calculate_distance(coord1, coord2):
     return geodesic(coord1, coord2).meters
 
-# Store points and lines
+# Store points, lines, and pipe lengths
 points = []
 point_names = []
 point_colors = []
