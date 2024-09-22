@@ -2,68 +2,89 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 from geopy.distance import geodesic
+import math
 
-# Initialize the Streamlit app
-st.title("Map Tool for Pipe Design with Distance Calculation")
+# Set up a title for the app
+st.title("Map-Based Piping Layout Tool")
 
-# Instructions
-st.write("""
-1. Interact with the map to zoom in and select points of interest.
-2. Click on the map to add dots representing places to pipe from or to.
-3. Draw lines between these dots (pipes), and the tool will give the distances in real-world scale.
+# Add instructions
+st.markdown("""
+This tool allows you to:
+1. Select an area of the map (with satellite imagery).
+2. Place points (representing facilities).
+3. Draw lines (pipes) between the points and calculate distances.
+4. Remove points or lines.
 """)
 
-# Create a base map centered at a default location with proper attribution
-m = folium.Map(location=[45.5236, -122.6750], zoom_start=13, tiles='OpenStreetMap')
+# Define the starting location and zoom for the map
+default_location = [37.7749, -122.4194]  # San Francisco, USA
+zoom_start = 13
 
-# Initialize data storage for coordinates
-selected_points = []
-line_segments = []
+# Create a Folium map with Mapbox Satellite layer
+m = folium.Map(location=default_location, zoom_start=zoom_start, tiles='Stamen Terrain')
 
-# Capture interaction from the Folium map
-map_data = st_folium(m, width=700, height=500)
+# Add Mapbox Satellite layer
+tile_url = "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token= pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
+folium.TileLayer(tiles=tile_url, attr='Mapbox').add_to(m)
 
-# Check if the user clicked on the map to add a point
-if map_data and map_data.get('last_clicked'):
-    last_click = map_data['last_clicked']
-    lat, lon = last_click['lat'], last_click['lng']
-    
-    # Append the selected point to the list
-    selected_points.append((lat, lon))
-    
-    # Add a marker for the selected point
-    folium.Marker([lat, lon], popup=f"Place {len(selected_points)}").add_to(m)
+# List to store the points (facilities)
+points = []
 
-    # Display the point that was added
-    st.write(f"Point {len(selected_points)} added at: Latitude: {lat}, Longitude: {lon}")
+# List to store lines (pipes) and distances
+lines = []
+distances = []
 
-# Allow user to draw lines between the points (pipes) after two points are added
-if len(selected_points) > 1:
-    st.write("Select two points to connect with a pipe:")
-    point1 = st.selectbox("Point 1", range(1, len(selected_points) + 1))
-    point2 = st.selectbox("Point 2", range(1, len(selected_points) + 1))
+# Sidebar to manage the map interactions
+st.sidebar.title("Map Interactions")
 
-    # Ensure the selected points are different
-    if point1 != point2:
-        # Get the coordinates for the two points
-        coord1 = selected_points[point1 - 1]
-        coord2 = selected_points[point2 - 1]
+# Capture area dimensions (selected via zoom and bounds)
+if st.sidebar.button("Capture Map Area"):
+    st.write("The current map bounds and zoom level would be used to determine the area.")
+    bounds = m.get_bounds()
+    st.write(f"Map Bounds: {bounds}")
 
-        # Draw a line between the points
-        folium.PolyLine(locations=[coord1, coord2], color='blue', weight=2.5).add_to(m)
+# Allow user to place a point (facility)
+latitude = st.sidebar.number_input("Latitude", value=default_location[0])
+longitude = st.sidebar.number_input("Longitude", value=default_location[1])
+if st.sidebar.button("Place Facility"):
+    point = [latitude, longitude]
+    points.append(point)
+    folium.Marker(location=point, tooltip=f"Facility {len(points)}").add_to(m)
+    st.success(f"Placed facility at {point}")
 
-        # Calculate the distance between the two points
-        distance = geodesic(coord1, coord2).meters
-        st.write(f"Distance between Point {point1} and Point {point2}: {distance:.2f} meters")
+# Allow user to connect points with lines (pipes)
+if len(points) > 1:
+    start_index = st.sidebar.selectbox("Select Starting Point", range(1, len(points) + 1))
+    end_index = st.sidebar.selectbox("Select Ending Point", range(1, len(points) + 1))
+    if st.sidebar.button("Connect Points"):
+        start_point = points[start_index - 1]
+        end_point = points[end_index - 1]
+        folium.PolyLine(locations=[start_point, end_point], color="blue", weight=2.5).add_to(m)
+        distance = geodesic(start_point, end_point).meters
+        distances.append(distance)
+        lines.append([start_point, end_point])
+        st.sidebar.write(f"Distance between Point {start_index} and Point {end_index}: {distance:.2f} meters")
 
-        # Store the line segment for reference
-        line_segments.append((coord1, coord2, distance))
+# Display all pipe distances
+st.sidebar.subheader("Pipe Distances")
+for i, distance in enumerate(distances, start=1):
+    st.sidebar.write(f"Pipe {i}: {distance:.2f} meters")
 
-# Re-render the map with the new markers and lines
-st_folium(m, width=700, height=500)
+# Remove points or lines
+if st.sidebar.button("Remove Last Facility"):
+    if points:
+        removed_point = points.pop()
+        st.warning(f"Removed facility at {removed_point}")
+    else:
+        st.warning("No more facilities to remove!")
 
-# Display a summary of pipe connections and their distances
-if line_segments:
-    st.write("Pipe Connections and Distances:")
-    for idx, (p1, p2, dist) in enumerate(line_segments):
-        st.write(f"Pipe {idx + 1}: From {p1} to {p2}, Distance: {dist:.2f} meters")
+if st.sidebar.button("Remove Last Pipe"):
+    if lines:
+        removed_line = lines.pop()
+        removed_distance = distances.pop()
+        st.warning(f"Removed pipe with distance {removed_distance:.2f} meters")
+    else:
+        st.warning("No more pipes to remove!")
+
+# Render the map in the Streamlit app
+st_data = st_folium(m, width=725)
