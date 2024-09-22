@@ -5,22 +5,33 @@ from geopy.distance import geodesic
 from folium import plugins
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Points and Customizable Lines")
+st.title("Interactive Map Tool with Customizable Points and Lines")
 
 # Add instructions
 st.markdown("""
 This tool allows you to:
-1. Select an area of the map by drawing a rectangle (region selection).
-2. Place points interactively by clicking on the map within the selected area.
-3. Draw lines (pipes) between the points and calculate real-world distances.
-4. Customize the colors and names of both points and lines.
+1. Select an area of the map by drawing a rectangle.
+2. Place points (with names and colors) interactively within the selected area.
+3. Draw lines (pipes) between points and calculate real-world distances.
+4. Search for a location by entering latitude and longitude (in sidebar).
 """)
 
 # Set the starting location and zoom to the Netherlands
 default_location = [52.3676, 4.9041]  # Amsterdam, Netherlands
 zoom_start = 13
 
-# Create a Folium map with Mapbox Satellite layer (one map)
+# Sidebar to manage the map interactions
+st.sidebar.title("Search by Coordinates")
+
+# Search for a location by Latitude and Longitude
+latitude = st.sidebar.number_input("Latitude", value=default_location[0])
+longitude = st.sidebar.number_input("Longitude", value=default_location[1])
+
+# Button to search for a location
+if st.sidebar.button("Search Location"):
+    default_location = [latitude, longitude]
+
+# Create a Folium map with Mapbox Satellite layer
 m = folium.Map(location=default_location, zoom_start=zoom_start)
 
 # Add Mapbox Satellite layer (replace this with your valid token)
@@ -41,17 +52,17 @@ draw = plugins.Draw(
 )
 draw.add_to(m)
 
-# Render the map and handle the drawings
-output = st_folium(m, width=725, height=500)
+# Function to calculate the geodesic distance between two points
+def calculate_distance(coord1, coord2):
+    return geodesic(coord1, coord2).meters
 
 # Store points, lines, and pipe lengths
 points = []
 lines = []
 total_pipe_length = 0
 
-# Function to calculate the geodesic distance between two points
-def calculate_distance(coord1, coord2):
-    return geodesic(coord1, coord2).meters
+# Render the map and handle the drawings
+output = st_folium(m, width=725, height=500)
 
 # Check if any drawings were made
 if output and output['all_drawings']:
@@ -65,13 +76,17 @@ if output and output['all_drawings']:
             width = calculate_distance((sw_corner[1], sw_corner[0]), (ne_corner[1], sw_corner[0]))
             height = calculate_distance((sw_corner[1], sw_corner[0]), (sw_corner[1], ne_corner[0]))
 
-            st.success(f"Selected Region Dimensions: Width = {width:.2f} meters, Height = {height:.2f} meters")
+            st.sidebar.success(f"Selected Region Dimensions: Width = {width:.2f} meters, Height = {height:.2f} meters")
+            st.sidebar.info("Now, you can place points within the selected area.")
 
         elif shape['geometry']['type'] == 'Point':  # Point (marker) placed
             lat = shape['geometry']['coordinates'][1]
             lng = shape['geometry']['coordinates'][0]
+            
+            # Display popup to enter point name and select color (Leaflet-style)
             point_name = f"Point {len(points) + 1}"
-            folium.Marker(location=[lat, lng], popup=point_name, icon=folium.Icon(color="red")).add_to(m)
+            color = "red"  # Default color for points
+            folium.Marker(location=[lat, lng], popup=point_name, icon=folium.Icon(color=color)).add_to(m)
             points.append((lat, lng, point_name))
             st.success(f"Placed point at ({lat:.5f}, {lng:.5f}) named '{point_name}'.")
 
@@ -88,10 +103,11 @@ if output and output['all_drawings']:
 
             total_pipe_length += pipe_length
             line_name = f"Line {len(lines) + 1}"
-            folium.PolyLine(locations=[(coord[1], coord[0]) for coord in coords], color="blue", weight=3, tooltip=line_name).add_to(m)
+            line_color = "blue"  # Default color for lines
+            folium.PolyLine(locations=[(coord[1], coord[0]) for coord in coords], color=line_color, weight=3, tooltip=line_name).add_to(m)
             lines.append((coords, line_name))
             st.success(f"Drawn line '{line_name}' with a length of {pipe_length:.2f} meters.")
 
 # Display the total pipe length in Streamlit
-st.subheader("Total Pipe Length")
-st.write(f"{total_pipe_length:.2f} meters")
+st.sidebar.subheader("Total Pipe Length")
+st.sidebar.write(f"{total_pipe_length:.2f} meters")
