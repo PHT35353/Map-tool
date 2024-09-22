@@ -62,7 +62,7 @@ lines = []
 rectangles = []
 total_pipe_length = 0
 
-# Render the map and handle the drawings (captures user-drawn shapes)
+# Render the map and handle the drawings
 output = st_folium(m, width=725, height=500)
 
 # Check if any drawings were made
@@ -82,7 +82,7 @@ if output and output['all_drawings']:
             width = calculate_distance((sw_corner[1], sw_corner[0]), (ne_corner[1], sw_corner[0]))
             height = calculate_distance((sw_corner[1], sw_corner[0]), (sw_corner[1], ne_corner[0]))
 
-            # Add rectangle with custom name and color to the map `m`
+            # Add rectangle with custom name and color
             folium.Rectangle(
                 bounds=[(sw_corner[1], sw_corner[0]), (ne_corner[1], ne_corner[0])],
                 color=rectangle_color,
@@ -101,7 +101,7 @@ if output and output['all_drawings']:
             marker_name = st.sidebar.text_input(f"Enter name for Marker {idx + 1}", f"Marker {idx + 1}")
             marker_color = st.sidebar.color_picker(f"Choose color for Marker {idx + 1}", "#0000ff")
 
-            # Add the Circle Marker with the popup to customize name and color to the map `m`
+            # Add the Circle Marker with the popup to customize name and color
             folium.CircleMarker(
                 location=[lat, lng],
                 radius=8,
@@ -131,7 +131,7 @@ if output and output['all_drawings']:
 
             total_pipe_length += pipe_length
 
-            # Draw the line with custom color and show distance on the map `m`
+            # Draw the line with custom color and show distance
             folium.PolyLine(
                 locations=[(coord[1], coord[0]) for coord in coords],
                 color=line_color,  # Custom color selected
@@ -144,5 +144,5 @@ if output and output['all_drawings']:
 st.sidebar.subheader("Total Pipe Length")
 st.sidebar.write(f"{total_pipe_length:.2f} meters")
 
-# **Render the final map with the updated shapes (only once)**
+# Render the updated map
 st_folium(m, width=725, height=500)
