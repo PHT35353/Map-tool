@@ -16,7 +16,7 @@ This tool allows you to:
 4. Search for a location by entering latitude and longitude (in sidebar).
 """)
 
-# Set the starting location and zoom to the Netherlands (this is only for initial map view)
+# Set the starting location and zoom to the Netherlands
 default_location = [52.3676, 4.9041]  # Amsterdam, Netherlands
 zoom_start = 13
 
@@ -61,9 +61,6 @@ points = []
 lines = []
 total_pipe_length = 0
 
-# Render the map and handle the drawings
-output = st_folium(m, width=725, height=500)
-
 # JavaScript for the popups to handle names and colors directly on the map
 popup_js = """
 <script>
@@ -97,6 +94,9 @@ popup_html_line = """
 """
 
 # Handle points and lines dynamically
+output = st_folium(m, width=725, height=500)
+
+# Check if any drawings were made
 if output and output['all_drawings']:
     for shape in output['all_drawings']:
         if shape['geometry']['type'] == 'Polygon':  # Rectangle drawn (region selection)
@@ -125,10 +125,10 @@ if output and output['all_drawings']:
                 fill=True,
                 fill_color=color,
                 fill_opacity=0.7,
-                popup=folium.Popup(popup_html_point + popup_js)
+                popup=folium.Popup(popup_html_point, max_width=300)
             ).add_to(m)
             points.append((lat, lng, point_name))
-            st.success(f"Placed Circle Marker at ({lat:.5f}, {lng:.5f}) named '{point_name}'.")
+            st.success(f"Placed Circle Marker named '{point_name}'.")
 
         elif shape['geometry']['type'] == 'LineString':  # Line drawn (pipe)
             coords = shape['geometry']['coordinates']
@@ -149,7 +149,7 @@ if output and output['all_drawings']:
                 color=line_color,
                 weight=3,
                 tooltip=line_name,
-                popup=folium.Popup(popup_html_line + popup_js)
+                popup=folium.Popup(popup_html_line, max_width=300)
             ).add_to(m)
             lines.append((coords, line_name))
             st.success(f"Drawn line '{line_name}' with a length of {pipe_length:.2f} meters.")
