@@ -14,8 +14,7 @@ st.write("""
 """)
 
 # Create a base map centered at a default location with proper attribution
-m = folium.Map(location=[45.5236, -122.6750], zoom_start=13, tiles='Stamen Terrain',
-               attr="Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL.")
+m = folium.Map(location=[45.5236, -122.6750], zoom_start=13, tiles='OpenStreetMap')
 
 # Initialize data storage for coordinates
 selected_points = []
