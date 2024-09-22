@@ -21,10 +21,10 @@ default_location = [37.7749, -122.4194]  # San Francisco, USA
 zoom_start = 13
 
 # Create a Folium map with Mapbox Satellite layer
-m = folium.Map(location=default_location, zoom_start=zoom_start, tiles='Stamen Terrain')
+m = folium.Map(location=default_location, zoom_start=zoom_start)
 
-# Add Mapbox Satellite layer
-tile_url = "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token= pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
+# Add Mapbox Satellite layer (remove spaces from the token)
+tile_url = "https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
 folium.TileLayer(tiles=tile_url, attr='Mapbox').add_to(m)
 
 # List to store the points (facilities)
@@ -36,12 +36,6 @@ distances = []
 
 # Sidebar to manage the map interactions
 st.sidebar.title("Map Interactions")
-
-# Capture area dimensions (selected via zoom and bounds)
-if st.sidebar.button("Capture Map Area"):
-    st.write("The current map bounds and zoom level would be used to determine the area.")
-    bounds = m.get_bounds()
-    st.write(f"Map Bounds: {bounds}")
 
 # Allow user to place a point (facility)
 latitude = st.sidebar.number_input("Latitude", value=default_location[0])
