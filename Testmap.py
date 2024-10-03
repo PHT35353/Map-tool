@@ -1,5 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import requests
 
 # Set up a title for the app
 st.title("Interactive Map Tool with 3D Zoomable & Rotatable Mapbox Satellite View")
@@ -115,47 +116,15 @@ mapbox_map_html = f"""
     
     map.addControl(Draw);
 
-    // Handle drawn features (lines, shapes)
-    map.on('draw.create', updateMeasurements);
-    map.on('draw.update', updateMeasurements);
-    map.on('draw.delete', updateMeasurements);
-
-    // Display distances and allow color/naming customization in the sidebar
-    function updateMeasurements(e) {{
-        const data = Draw.getAll();
-        let sidebarContent = "";
-        if (data.features.length > 0) {{
-            const features = data.features;
-            features.forEach(function(feature, index) {{
-                if (feature.geometry.type === 'LineString') {{
-                    const length = turf.length(feature);
-                    // Show the length in a popup on the map
-                    const popup = new mapboxgl.Popup()
-                        .setLngLat(feature.geometry.coordinates[0])
-                        .setHTML('<p>Line Length: ' + length.toFixed(2) + ' km</p>')
-                        .addTo(map);
-                    // Update the sidebar
-                    sidebarContent += '<p>Line ' + (index + 1) + ' Length: ' + length.toFixed(2) + ' km</p>';
-                }} else if (feature.geometry.type === 'Point') {{
-                    // Placeholder for marker (landmark) customization
-                    sidebarContent += '<p>Landmark ' + (index + 1) + ' created.</p>';
-                }} else if (feature.geometry.type === 'Polygon') {{
-                    sidebarContent += '<p>Rectangle ' + (index + 1) + ' created.</p>';
-                }}
-            }});
-        }} else {{
-            sidebarContent = "<p>No features drawn yet.</p>";
-        }}
-        window.parent.postMessage(sidebarContent, "*");
-    }}
-
     // Screenshot functionality
     document.getElementById('screenshot').addEventListener('click', function() {{
         html2canvas(document.querySelector("#map")).then(canvas => {{
-            let link = document.createElement('a');
-            link.download = 'map_screenshot.png';
-            link.href = canvas.toDataURL();
-            link.click();
+            canvas.toBlob(function(blob) {{
+                let link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'map_screenshot.png';
+                link.click();
+            }});
         }});
     }});
 </script>
@@ -187,7 +156,6 @@ if address_search:
     geocode_url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{address_search}.json?access_token={mapbox_access_token}"
     # Request the geocoded location
     try:
-        import requests
         response = requests.get(geocode_url)
         if response.status_code == 200:
             geo_data = response.json()
