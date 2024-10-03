@@ -28,21 +28,29 @@ location = st.sidebar.text_input("Search for a location", "New York, USA")
 # Zoom level for the map
 zoom_level = st.sidebar.slider("Select zoom level", 1, 20, 15)
 
-# Get the location coordinates from search
-response = geocoder.forward(location).geojson()
-coordinates = response['features'][0]['geometry']['coordinates']
+try:
+    # Get the location coordinates from search
+    response = geocoder.forward(location).geojson()
+    coordinates = response['features'][0]['geometry']['coordinates']
+    st.write(f"Coordinates for {location}: {coordinates}")
+except Exception as e:
+    st.error(f"Error fetching coordinates: {e}")
+    coordinates = [-74.0060, 40.7128]  # Fallback to default coordinates (New York City)
 
 # Simplified Pydeck map without 3D buildings
-st.pydeck_chart(
-    pdk.Deck(
-        map_style=map_styles[map_style],
-        initial_view_state=pdk.ViewState(
-            latitude=coordinates[1],
-            longitude=coordinates[0],
-            zoom=zoom_level,
-            pitch=45,  # Add pitch for a slight 3D effect
-            bearing=0
-        ),
-        mapbox_key=mapbox_token
+try:
+    st.pydeck_chart(
+        pdk.Deck(
+            map_style=map_styles[map_style],
+            initial_view_state=pdk.ViewState(
+                latitude=coordinates[1],  # Latitude
+                longitude=coordinates[0],  # Longitude
+                zoom=zoom_level,
+                pitch=45,  # Add pitch for a slight 3D effect
+                bearing=0
+            ),
+            mapbox_key=mapbox_token
+        )
     )
-)
+except Exception as e:
+    st.error(f"Error rendering the map: {e}")
