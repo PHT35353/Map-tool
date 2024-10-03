@@ -120,12 +120,12 @@ mapbox_map_html = f"""
             features.forEach(function(feature, index) {{
                 if (feature.geometry.type === 'LineString') {{
                     const length = turf.length(feature);
-                    sidebarContent += `Line ${index + 1}: Length = ${length.toFixed(2)} km<br>`;
+                    sidebarContent += f"Line {index + 1}: Length = {round(length, 2)} km<br>";
                 }} else if (feature.geometry.type === 'Polygon') {{
                     const bbox = turf.bbox(feature);
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
                     const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
-                    sidebarContent += `Polygon ${index + 1}: Width = ${width.toFixed(2)} km, Height = ${height.toFixed(2)} km<br>`;
+                    sidebarContent += f"Polygon {index + 1}: Width = {round(width, 2)} km, Height = {round(height, 2)} km<br>";
                 }}
             }});
         }} else {{
