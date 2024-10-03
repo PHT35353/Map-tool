@@ -37,7 +37,7 @@ if st.sidebar.button("Search Location"):
 
 # Sidebar section for displaying measurements
 st.sidebar.title("Measurements")
-distance_info = st.sidebar.empty()
+measurement_display = st.sidebar.empty()  # Placeholder for the measurements
 
 # Mapbox GL JS API token
 mapbox_access_token = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
@@ -306,24 +306,24 @@ if address_search:
     except Exception as e:
         st.sidebar.error(f"Error: {e}")
 
-# Placeholder to store the measurements from the map
-measurements = st.empty()
+# Placeholder for receiving and displaying measurements from the map
+measurement = st.empty()
 
-# JavaScript listener to capture the messages from the map
+# JavaScript listener to capture the messages from the map and send to Streamlit
 components.html(f"""
     <script>
     window.addEventListener('message', function(event) {{
         const messageData = event.data;
         const streamlitMessage = messageData;
 
-        // Pass the message to Streamlit if it's coming from the map
+        // Send the message to Streamlit
         if (streamlitMessage) {{
-            window.parent.postMessage({{'isTrusted': true, 'streamlitMessage': streamlitMessage}}, "*");
+            const iframeMessage = JSON.stringify({{ 'type': 'update', 'content': streamlitMessage }});
+            window.parent.postMessage(iframeMessage, "*");
         }}
     }});
     </script>
 """, height=0)
 
-# This part ensures that the message data from the map updates in the Streamlit app
-if st.session_state.get('streamlitMessage'):
-    measurements.markdown(st.session_state['streamlitMessage'])
+# Display the received message from the map in the sidebar
+measurement_display.markdown(measurement)
