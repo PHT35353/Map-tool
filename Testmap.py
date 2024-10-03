@@ -226,7 +226,7 @@ if address_search:
         response = requests.get(geocode_url)
         if response.status_code == 200:
             geo_data = response.json()
-           if len(geo_data['features']) > 0:
+            if len(geo_data['features']) > 0:  # Fix the unmatched parenthesis here
                 coordinates = geo_data['features'][0]['center']
                 latitude, longitude = coordinates[1], coordinates[0]
                 st.sidebar.success(f"Address found: {geo_data['features'][0]['place_name']}")
