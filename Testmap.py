@@ -53,6 +53,7 @@ line_layers = [
         get_color="color",
         width_scale=20,
         width_min_pixels=5,
+        pickable=True,
     )
 ]
 
