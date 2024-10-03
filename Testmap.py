@@ -5,6 +5,9 @@ import numpy as np
 # Set your Mapbox access token
 MAPBOX_ACCESS_TOKEN = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
 
+# Set the Mapbox access token
+pdk.settings.mapbox_api_access_token = MAPBOX_ACCESS_TOKEN
+
 # Initialize state variables
 if 'lines' not in st.session_state:
     st.session_state.lines = []
@@ -82,7 +85,6 @@ try:
     r = pdk.Deck(
         layers=line_layers + point_layers,
         initial_view_state=initial_view_state,
-        mapbox_key=MAPBOX_ACCESS_TOKEN,
     )
 except Exception as e:
     st.error(f"Error creating the deck: {e}")
