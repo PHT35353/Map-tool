@@ -120,12 +120,12 @@ mapbox_map_html = f"""
             features.forEach(function(feature, index) {{
                 if (feature.geometry.type === 'LineString') {{
                     const length = turf.length(feature);
-                    sidebarContent += `Line {index + 1}: Length = {length.toFixed(2)} km<br>`;
+                    sidebarContent += `Line ${index + 1}: Length = ${length.toFixed(2)} km<br>`;
                 }} else if (feature.geometry.type === 'Polygon') {{
                     const bbox = turf.bbox(feature);
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
                     const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
-                    sidebarContent += `Polygon {index + 1}: Width = {width.toFixed(2)} km, Height = {height.toFixed(2)} km<br>`;
+                    sidebarContent += `Polygon ${index + 1}: Width = ${width.toFixed(2)} km, Height = ${height.toFixed(2)} km<br>`;
                 }}
             }});
         }} else {{
@@ -145,7 +145,7 @@ components.html(mapbox_map_html, height=600)
 if 'measurement_data' not in st.session_state:
     st.session_state['measurement_data'] = ""
 
-# JavaScript listener to capture the messages from the map and update the session state
+# JavaScript listener to capture the messages from the map and send to Streamlit
 components.html(f"""
     <script>
     window.addEventListener('message', function(event) {{
