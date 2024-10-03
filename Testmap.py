@@ -1,6 +1,5 @@
 import streamlit as st
 import pydeck as pdk
-import pandas as pd
 import numpy as np
 
 # Set your Mapbox access token
@@ -49,11 +48,16 @@ initial_view_state = pdk.ViewState(
 line_layers = [
     pdk.Layer(
         "PathLayer",
-        data=[{"path": [line[0], line[1]], "color": st.session_state.color} for line in st.session_state.lines],
+        data=[
+            {
+                "path": [[line[0][1], line[0][0]], [line[1][1], line[1][0]]],  # [longitude, latitude]
+                "color": st.session_state.color,
+            }
+            for line in st.session_state.lines
+        ],
         get_color="color",
         width_scale=20,
         width_min_pixels=5,
-        pickable=True,
     )
 ]
 
