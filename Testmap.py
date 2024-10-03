@@ -9,14 +9,14 @@ st.markdown("""
 This tool allows you to:
 1. Select an area of the map by drawing a rectangle and customizing its name and color.
 2. Place Circle Markers (with custom names and colors) within the selected area.
-3. Draw lines (pipes) between Circle Markers with customizable names and colors. Each line will display its length.
+3. Draw lines (pipes) between Circle Markers with customizable names and colors. Each line will display its length both on the map and in the sidebar.
 4. Search for a location by entering latitude and longitude (in the sidebar), or use the address search.
 5. Zoom and rotate the 3D satellite map for a more interactive experience.
 6. Save the map and download it as a screenshot.
 """)
 
 # Sidebar to manage the map interactions
-st.sidebar.title("Search by Coordinates")
+st.sidebar.title("Map Controls")
 
 # Default location set to Amsterdam, Netherlands
 default_location = [52.3676, 4.9041]
@@ -26,7 +26,7 @@ latitude = st.sidebar.number_input("Latitude", value=default_location[0])
 longitude = st.sidebar.number_input("Longitude", value=default_location[1])
 
 # Search bar for address search
-address_search = st.sidebar.text_input("Search for address")
+address_search = st.sidebar.text_input("Search for address (requires internet connection)")
 
 # Button to search for a location
 if st.sidebar.button("Search Location"):
@@ -123,19 +123,30 @@ mapbox_map_html = f"""
     // Display distances and allow color/naming customization in the sidebar
     function updateMeasurements(e) {{
         const data = Draw.getAll();
+        let sidebarContent = "";
         if (data.features.length > 0) {{
             const features = data.features;
-            features.forEach(function(feature) {{
+            features.forEach(function(feature, index) {{
                 if (feature.geometry.type === 'LineString') {{
                     const length = turf.length(feature);
-                    // Send the length to Streamlit (Python)
-                    const event = new CustomEvent('update-distance', {{
-                        detail: {{ length: length.toFixed(2) }}
-                    }});
-                    window.dispatchEvent(event);
+                    // Show the length in a popup on the map
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat(feature.geometry.coordinates[0])
+                        .setHTML('<p>Line Length: ' + length.toFixed(2) + ' km</p>')
+                        .addTo(map);
+                    // Update the sidebar
+                    sidebarContent += '<p>Line ' + (index + 1) + ' Length: ' + length.toFixed(2) + ' km</p>';
+                }} else if (feature.geometry.type === 'Point') {{
+                    // Placeholder for marker (landmark) customization
+                    sidebarContent += '<p>Landmark ' + (index + 1) + ' created.</p>';
+                }} else if (feature.geometry.type === 'Polygon') {{
+                    sidebarContent += '<p>Rectangle ' + (index + 1) + ' created.</p>';
                 }}
             }});
+        }} else {{
+            sidebarContent = "<p>No features drawn yet.</p>";
         }}
+        window.parent.postMessage(sidebarContent, "*");
     }}
 
     // Screenshot functionality
@@ -155,24 +166,39 @@ mapbox_map_html = f"""
 # Render the Mapbox 3D Satellite map with drawing functionality and custom features
 components.html(mapbox_map_html, height=600)
 
-# Receive events from JavaScript to update the Streamlit sidebar
+# JavaScript callback to update Streamlit sidebar with the drawn features and their lengths
 def js_callback(data):
-    st.sidebar.write(f"Pipe Length: {data['length']} km")
+    st.sidebar.write(data)
 
 components.html(
     """
     <script>
-    window.addEventListener('update-distance', function(event) {
-        const pipeLength = event.detail.length;
-        // Send the pipe length back to Streamlit
-        window.parent.postMessage(pipeLength, "*");
+    window.addEventListener('message', function(event) {
+        const sidebarContent = event.data;
+        window.parent.postMessage(sidebarContent, "*");
     });
     </script>
     """,
     height=0
 )
 
-# Latitude/Longitude and Address search functionality is handled within the map
+# Address search using Mapbox Geocoding API
 if address_search:
-    # Implement Mapbox Geocoding API if required for address search functionality
-    pass
+    geocode_url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{address_search}.json?access_token={mapbox_access_token}"
+    # Request the geocoded location
+    try:
+        import requests
+        response = requests.get(geocode_url)
+        if response.status_code == 200:
+            geo_data = response.json()
+            if len(geo_data['features']) > 0:
+                coordinates = geo_data['features'][0]['center']
+                latitude, longitude = coordinates[1], coordinates[0]
+                st.sidebar.success(f"Address found: {geo_data['features'][0]['place_name']}")
+                st.sidebar.write(f"Coordinates: Latitude {latitude}, Longitude {longitude}")
+            else:
+                st.sidebar.error("Address not found.")
+        else:
+            st.sidebar.error("Error connecting to the Mapbox API.")
+    except Exception as e:
+        st.sidebar.error(f"Error: {e}")
