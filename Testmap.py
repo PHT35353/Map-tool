@@ -107,10 +107,16 @@ mapbox_map_html = f"""
     
     map.addControl(Draw);
 
+    let landmarks = [];
+
+    // Store names and colors of polygons, lines, and markers once during creation
+    let featureColors = {{}};
+    let featureNames = {{}};
+
     // Handle drawn features (lines, shapes)
     map.on('draw.create', updateMeasurements);
     map.on('draw.update', updateMeasurements);
-    map.on('draw.delete', updateMeasurements);
+    map.on('draw.delete', deleteFeature);
 
     function updateMeasurements(e) {{
         const data = Draw.getAll();
@@ -133,6 +139,16 @@ mapbox_map_html = f"""
         }}
         window.parent.postMessage(sidebarContent, "*");
     }}
+
+    // Function to handle deletion of features
+    function deleteFeature(e) {{
+        const features = e.features;
+        features.forEach(function(feature) {{
+            delete featureColors[feature.id];
+            delete featureNames[feature.id];
+        }});
+        updateMeasurements();
+    }}
 </script>
 </body>
 </html>
@@ -151,12 +167,14 @@ components.html(f"""
     window.addEventListener('message', function(event) {{
         const messageData = event.data;
         if (typeof messageData === 'string') {{
-            window.parent.postMessage(messageData, "*");
+            const cleanedMessage = messageData.replace(/\\n/g, "<br>");
+            window.parent.postMessage(cleanedMessage, "*");
         }}
     }});
     </script>
 """, height=0)
 
-# Update the Streamlit sidebar with the measurements received
+# Display the received message in the sidebar
 if st.session_state['measurement_data']:
     measurement_display.markdown(st.session_state['measurement_data'])
+
