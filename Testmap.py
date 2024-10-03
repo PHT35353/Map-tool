@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import requests
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Individual Colors and Measurements")
+st.title("Interactive Map Tool with Individual Colors, Names, and Landmark Relations")
 
 # Add instructions and explain color options
 st.markdown("""
@@ -11,7 +11,7 @@ This tool allows you to:
 1. Draw rectangles (polygons), lines, and markers (landmarks) on the map.
 2. Assign names and choose specific colors for each feature individually upon creation.
 3. Display distances for lines and dimensions for polygons both on the map and in the sidebar.
-4. Search for a location by entering latitude and longitude or an address.
+4. Show relationships between landmarks and lines (e.g., a line belongs to two landmarks).
 
 **Available Colors**:
 - Named colors: `red`, `blue`, `green`, `yellow`, `purple`, `cyan`, `pink`, `orange`, `black`, `white`, `gray`
@@ -126,6 +126,10 @@ mapbox_map_html = f"""
                     const startCoord = feature.geometry.coordinates[0];
                     const endCoord = feature.geometry.coordinates[feature.geometry.coordinates.length - 1];
 
+                    // Identify landmarks for the start and end points of the line
+                    let startLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, startCoord) < 0.01);
+                    let endLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, endCoord) < 0.01);
+
                     // Only ask for name once
                     if (!featureNames[feature.id]) {{
                         const name = prompt("Enter a name for this line:");
@@ -138,20 +142,19 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = lineColor || 'blue';
                     }}
 
-                    // Change color of the line dynamically
-                    map.setFeatureState({{
-                        source: "composite",
-                        id: feature.id
-                    }}, {{
-                        "line-color": featureColors[feature.id]
-                    }});
+                    map.setPaintProperty(
+                        "custom-line-" + feature.id,
+                        'line-color',
+                        featureColors[feature.id]
+                    );
 
+                    // Show the line and its association with landmarks
                     const popup = new mapboxgl.Popup()
                         .setLngLat(startCoord)
-                        .setHTML('<p>Line: ' + featureNames[feature.id] + '<br>Length: ' + length.toFixed(2) + ' km</p>')
+                        .setHTML('<p>Line belongs to: ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + length.toFixed(2) + ' km</p>')
                         .addTo(map);
                     
-                    sidebarContent += '<p>' + featureNames[feature.id] + ': ' + length.toFixed(2) + ' km</p>';
+                    sidebarContent += '<p>Line ' + featureNames[feature.id] + ' belongs to ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + ': ' + length.toFixed(2) + ' km</p>';
                 }} else if (feature.geometry.type === 'Point') {{
                     if (!feature.properties.name) {{
                         if (!featureNames[feature.id]) {{
@@ -171,15 +174,13 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = markerColor || 'black';
                     }}
 
-                    // Change color of the marker dynamically
-                    map.setFeatureState({{
-                        source: "composite",
-                        id: feature.id
-                    }}, {{
-                        "circle-color": featureColors[feature.id]
-                    }});
+                    map.setPaintProperty(
+                        "custom-marker-" + feature.id,
+                        'circle-color',
+                        featureColors[feature.id]
+                    );
 
-                    sidebarContent += '<p>Landmark: ' + feature.properties.name + '</p>';
+                    sidebarContent += '<p>Landmark ' + feature.properties.name + '</p>';
                 }} else if (feature.geometry.type === 'Polygon') {{
                     if (!feature.properties.name) {{
                         if (!featureNames[feature.id]) {{
@@ -197,13 +198,11 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = polygonColor || 'yellow';
                     }}
 
-                    // Change color of the polygon dynamically
-                    map.setFeatureState({{
-                        source: "composite",
-                        id: feature.id
-                    }}, {{
-                        "fill-color": featureColors[feature.id]
-                    }});
+                    map.setPaintProperty(
+                        "custom-polygon-" + feature.id,
+                        'fill-color',
+                        featureColors[feature.id]
+                    );
 
                     const bbox = turf.bbox(feature);
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
@@ -214,7 +213,7 @@ mapbox_map_html = f"""
                         .setHTML('<p>Polygon: ' + feature.properties.name + '<br>Width: ' + width.toFixed(2) + ' km, Height: ' + height.toFixed(2) + ' km</p>')
                         .addTo(map);
                     
-                    sidebarContent += '<p>Polygon: ' + feature.properties.name + ' Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
+                    sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
                 }}
             }});
         }} else {{
