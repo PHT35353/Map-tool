@@ -1,12 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as components
-import folium
-from streamlit_folium import st_folium
-from geopy.distance import geodesic
-from folium import plugins
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Zoomable & Rotatable 3D Mapbox View")
+st.title("Interactive Map Tool with 3D Zoomable & Rotatable Mapbox Satellite View")
 
 # Add instructions
 st.markdown("""
@@ -15,7 +11,7 @@ This tool allows you to:
 2. Place Circle Markers (with custom names and colors) within the selected area.
 3. Draw lines (pipes) between Circle Markers with customizable names and colors. Each line will display its length.
 4. Search for a location by entering latitude and longitude (in the sidebar).
-5. Zoom and rotate the 3D map for a more interactive experience.
+5. Zoom and rotate the 3D satellite map for a more interactive experience.
 """)
 
 # Sidebar to manage the map interactions
@@ -32,19 +28,22 @@ longitude = st.sidebar.number_input("Longitude", value=default_location[1])
 if st.sidebar.button("Search Location"):
     default_location = [latitude, longitude]
 
-# Mapbox GL JS Map
+# Mapbox GL JS API token
 mapbox_access_token = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
 
-# HTML template to load the Mapbox map with zoom, pitch (3D), and rotation capabilities
+# HTML and JS for Mapbox with Mapbox Draw plugin to add drawing functionalities
 mapbox_map_html = f"""
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Zoom and Rotate Map</title>
+    <title>Mapbox GL JS Drawing Tool</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.css" rel="stylesheet" />
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.3.0/mapbox-gl-draw.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.3.0/mapbox-gl-draw.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf/turf.min.js"></script>
     <style>
         body {{
             margin: 0;
@@ -56,147 +55,71 @@ mapbox_map_html = f"""
             bottom: 0;
             width: 100%;
         }}
+        .mapboxgl-ctrl {{
+            margin: 10px;
+        }}
     </style>
 </head>
 <body>
 <div id="map"></div>
 <script>
     mapboxgl.accessToken = '{mapbox_access_token}';
+    
     const map = new mapboxgl.Map({{
         container: 'map',
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
         center: [{longitude}, {latitude}],
-        zoom: 13,  // Adjust this value for default zoom level
-        pitch: 45, // Angle for the 3D effect
+        zoom: 13,
+        pitch: 45, // For 3D effect
         bearing: 0, // Rotation angle
-        antialias: true  // Improves the 3D look
+        antialias: true
     }});
 
-    // Enable map rotation and zoom controls
+    // Add map controls for zoom, rotation
     map.addControl(new mapboxgl.NavigationControl());
 
-    // Allow rotation and pitch adjustments using right click
+    // Enable rotation and pitch adjustments using right-click
     map.dragRotate.enable();
     map.touchZoomRotate.enableRotation();
+
+    // Add the Draw control for drawing polygons, markers, lines, etc.
+    const Draw = new MapboxDraw({{
+        displayControlsDefault: false,
+        controls: {{
+            polygon: true,
+            line_string: true,
+            point: true,
+            trash: true
+        }},
+        defaultMode: 'draw_polygon'
+    }});
+    
+    map.addControl(Draw);
+
+    // Handle drawn features (lines, shapes)
+    map.on('draw.create', updateMeasurements);
+    map.on('draw.update', updateMeasurements);
+    map.on('draw.delete', updateMeasurements);
+
+    function updateMeasurements(e) {{
+        const data = Draw.getAll();
+        if (data.features.length > 0) {{
+            const features = data.features;
+            features.forEach(function(feature) {{
+                if (feature.geometry.type === 'LineString') {{
+                    const length = turf.length(feature);
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat(feature.geometry.coordinates[0])
+                        .setHTML('<p>Line length: ' + length.toFixed(2) + ' km</p>')
+                        .addTo(map);
+                }}
+            }});
+        }}
+    }}
 </script>
 </body>
 </html>
 """
 
-# Display the map using Streamlit components (Mapbox GL JS)
+# Render the Mapbox 3D Satellite map with drawing functionality
 components.html(mapbox_map_html, height=600)
-
-# The interactive drawing tools (Folium part) will still remain, but shown separately
-st.markdown("## Drawing Tools (Folium)")
-
-# Folium map setup for drawing interactions (but not displayed in the same map)
-m = folium.Map(location=default_location, zoom_start=13)
-
-# Add drawing tool for selecting a region, placing circle markers, and drawing lines
-draw = plugins.Draw(
-    export=True,  # Allow exporting shapes as GeoJSON
-    draw_options={
-        'polyline': {'shapeOptions': {'color': 'red', 'weight': 3}},  # Default color for lines (pipes)
-        'polygon': False,
-        'circle': False,
-        'rectangle': {'shapeOptions': {'color': 'green', 'weight': 2}},  # Default color for rectangles
-        'circlemarker': {'repeatMode': True},  # Enable Circle Marker for point placement
-    },
-    edit_options={'edit': False}  # Disable edit functionality for simplicity
-)
-draw.add_to(m)
-
-# Function to calculate the geodesic distance between two points
-def calculate_distance(coord1, coord2):
-    return geodesic(coord1, coord2).meters
-
-# Store points, lines, and pipe lengths
-points = []
-lines = []
-rectangles = []
-total_pipe_length = 0
-
-# Render the map and handle the drawings
-output = st_folium(m, width=725, height=500)
-
-# Check if any drawings were made
-if output and output['all_drawings']:
-    for idx, shape in enumerate(output['all_drawings']):
-        if shape['geometry']['type'] == 'Polygon':  # Rectangle drawn (region selection)
-            coords = shape['geometry']['coordinates'][0]
-            sw_corner = coords[0]  # Southwest corner
-            ne_corner = coords[2]  # Northeast corner
-
-            # Sidebar customization for this specific rectangle
-            st.sidebar.subheader(f"Customize Rectangle {idx + 1}")
-            rectangle_name = st.sidebar.text_input(f"Enter name for Rectangle {idx + 1}", f"Rectangle {idx + 1}")
-            rectangle_color = st.sidebar.color_picker(f"Choose color for Rectangle {idx + 1}", "#00ff00")
-
-            # Calculate the real-world dimensions of the selected rectangle
-            width = calculate_distance((sw_corner[1], sw_corner[0]), (ne_corner[1], sw_corner[0]))
-            height = calculate_distance((sw_corner[1], sw_corner[0]), (sw_corner[1], ne_corner[0]))
-
-            # Add rectangle with custom name and color
-            folium.Rectangle(
-                bounds=[(sw_corner[1], sw_corner[0]), (ne_corner[1], ne_corner[0])],
-                color=rectangle_color,
-                fill=True,
-                fill_opacity=0.5,
-                popup=rectangle_name
-            ).add_to(m)
-            st.sidebar.success(f"Rectangle {rectangle_name} drawn: Width = {width:.2f} meters, Height = {height:.2f} meters")
-
-        elif shape['geometry']['type'] == 'Point':  # Point (circle marker) placed
-            lat = shape['geometry']['coordinates'][1]
-            lng = shape['geometry']['coordinates'][0]
-            
-            # Sidebar customization for this specific marker
-            st.sidebar.subheader(f"Customize Marker {idx + 1}")
-            marker_name = st.sidebar.text_input(f"Enter name for Marker {idx + 1}", f"Marker {idx + 1}")
-            marker_color = st.sidebar.color_picker(f"Choose color for Marker {idx + 1}", "#0000ff")
-
-            # Add the Circle Marker with the popup to customize name and color
-            folium.CircleMarker(
-                location=[lat, lng],
-                radius=8,
-                fill=True,
-                fill_opacity=0.7,
-                color=marker_color,
-                fill_color=marker_color,
-                popup=marker_name
-            ).add_to(m)
-            points.append((lat, lng))
-
-        elif shape['geometry']['type'] == 'LineString':  # Line drawn (pipe)
-            coords = shape['geometry']['coordinates']
-            pipe_length = 0
-
-            # Sidebar customization for this specific line
-            st.sidebar.subheader(f"Customize Line {idx + 1}")
-            line_name = st.sidebar.text_input(f"Enter name for Line {idx + 1}", f"Line {idx + 1}")
-            line_color = st.sidebar.color_picker(f"Choose color for Line {idx + 1}", "#ff0000")
-
-            # Calculate the total distance of the pipe (sum of segment distances)
-            for i in range(len(coords) - 1):
-                start = (coords[i][1], coords[i][0])  # Lat, Lng
-                end = (coords[i+1][1], coords[i+1][0])  # Lat, Lng
-                segment_length = calculate_distance(start, end)
-                pipe_length += segment_length
-
-            total_pipe_length += pipe_length
-
-            # Draw the line with custom color and show distance
-            folium.PolyLine(
-                locations=[(coord[1], coord[0]) for coord in coords],
-                color=line_color,  # Custom color selected
-                weight=3,
-                popup=f"{line_name}: {pipe_length:.2f} meters"
-            ).add_to(m)
-            lines.append(coords)
-
-# Display the total pipe length in the sidebar
-st.sidebar.subheader("Total Pipe Length")
-st.sidebar.write(f"{total_pipe_length:.2f} meters")
-
-# Render the updated map
-st_folium(m, width=725, height=500)
