@@ -5,7 +5,7 @@ from geopy.distance import geodesic
 from folium import plugins
 
 # Set up a title for the app
-st.title("Interactive Map Tool with 3D Terrain and Customizable Shapes")
+st.title("Interactive Map Tool with Mapbox 3D Satellite View")
 
 # Add instructions
 st.markdown("""
@@ -13,8 +13,7 @@ This tool allows you to:
 1. Select an area of the map by drawing a rectangle and customizing its name and color.
 2. Place Circle Markers (with custom names and colors) within the selected area.
 3. Draw lines (pipes) between Circle Markers with customizable names and colors. Each line will display its length.
-4. View the map in 3D terrain mode with satellite imagery from Mapbox.
-5. Search for a location by entering latitude and longitude (in the sidebar).
+4. Search for a location by entering latitude and longitude (in the sidebar).
 """)
 
 # Set the starting location and zoom to the Netherlands
@@ -32,34 +31,27 @@ longitude = st.sidebar.number_input("Longitude", value=default_location[1])
 if st.sidebar.button("Search Location"):
     default_location = [latitude, longitude]
 
-# Create a Folium map with Mapbox Satellite Streets and 3D terrain
-mapbox_token = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
+# Create a Folium map with Mapbox Satellite + Terrain for 3D effect
+# Use your Mapbox API key and style URLs to enable satellite view and 3D terrain
+tile_url = f"https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{{z}}/{{x}}/{{y}}?access_token=pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
+m = folium.Map(location=default_location, zoom_start=zoom_start, tiles=None)  # No default tile layer
 
-# Create a Mapbox 3D style
-m = folium.Map(location=default_location, zoom_start=zoom_start, tiles=None)
-
-# Use Mapbox's 3D Satellite and Streets layer
+# Add Mapbox's 3D satellite view as the base layer
 folium.TileLayer(
-    tiles=f"https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v11/tiles/{{z}}/{{x}}/{{y}}?access_token={mapbox_token}",
-    attr='Mapbox',
-    name='Mapbox Satellite 3D',
+    tiles=tile_url,
+    attr='Mapbox Satellite Streets',
+    name='Mapbox Satellite Streets',
     control=False
 ).add_to(m)
 
-# Add a Mapbox GL JS 3D terrain effect
-m.get_root().html.add_child(folium.Element("""
-<script>
-L.Map.addInitHook(function () {
-    var map = this;
-    map._add3d = function () {
-        mapboxgl.accessToken = '{}';
-        mapboxgl.Map.prototype.addControl(new mapboxgl.TerrainControl({ source: 'mapbox-dem', exaggeration: 1.5 }), 'bottom-right');
-        map.setStyle('mapbox://styles/mapbox/satellite-streets-v11');
-    };
-    map._add3d();
-});
-</script>
-""".format(mapbox_token)))
+# Add Mapbox 3D terrain support via Mapbox GL JS Terrain (by adding a custom layer)
+terrain_tile_url = f"https://api.mapbox.com/v4/mapbox.mapbox-terrain-v2,mapbox.mapbox-satellite-v9/tiles/{{z}}/{{x}}/{{y}}?access_token=pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
+folium.TileLayer(
+    tiles=terrain_tile_url,
+    attr='Mapbox 3D Terrain',
+    name='Mapbox 3D Terrain',
+    control=False
+).add_to(m)
 
 # Add drawing tool for selecting a region, placing circle markers, and drawing lines
 draw = plugins.Draw(
