@@ -240,6 +240,18 @@ mapbox_map_html = f"""
                     
                     sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
                 }}
+
+                // Update the color and position of the layer on updates
+                if (map.getLayer('line-' + feature.id)) {{
+                    map.getSource('line-' + feature.id).setData(feature);
+                }}
+                if (map.getLayer('polygon-' + feature.id)) {{
+                    map.getSource('polygon-' + feature.id).setData(feature);
+                }}
+                if (map.getLayer('marker-' + feature.id)) {{
+                    map.getSource('marker-' + feature.id).setData(feature);
+                }}
+
             }});
         }} else {{
             sidebarContent = "<p>No features drawn yet.</p>";
