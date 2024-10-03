@@ -306,22 +306,24 @@ if address_search:
     except Exception as e:
         st.sidebar.error(f"Error: {e}")
 
-# Placeholder for receiving and displaying sidebar content from JavaScript
-message_received = st.empty()
+# Placeholder to store the measurements from the map
+measurements = st.empty()
 
-# JavaScript communication listener for the sidebar content
+# JavaScript listener to capture the messages from the map
 components.html(f"""
     <script>
     window.addEventListener('message', function(event) {{
         const messageData = event.data;
         const streamlitMessage = messageData;
+
+        // Pass the message to Streamlit if it's coming from the map
         if (streamlitMessage) {{
-            window.parent.postMessage({{'type': 'streamlit-message', 'content': streamlitMessage}}, "*");
+            window.parent.postMessage({{'isTrusted': true, 'streamlitMessage': streamlitMessage}}, "*");
         }}
     }});
     </script>
-""")
+""", height=0)
 
-# Displaying the content in the sidebar (width, height, distances)
-if st.session_state.get('streamlit-message'):
-    message_received.markdown(st.session_state['streamlit-message'])
+# This part ensures that the message data from the map updates in the Streamlit app
+if st.session_state.get('streamlitMessage'):
+    measurements.markdown(st.session_state['streamlitMessage'])
