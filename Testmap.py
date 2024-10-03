@@ -1,6 +1,5 @@
 import streamlit as st
 import streamlit.components.v1 as components
-import json
 import requests
 
 # Set up a title for the app
@@ -156,12 +155,6 @@ mapbox_map_html = f"""
         }}
         window.parent.postMessage(sidebarContent, "*");
     }}
-
-    // Load GeoJSON data if uploaded
-    {f"""
-    const savedGeoJSON = {json.dumps(json.load(saved_geojson))};
-    Draw.set(savedGeoJSON);
-    """ if saved_geojson else ""}
 </script>
 </body>
 </html>
