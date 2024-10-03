@@ -107,16 +107,10 @@ mapbox_map_html = f"""
     
     map.addControl(Draw);
 
-    let landmarks = [];
-
-    // Store names and colors of polygons, lines, and markers once during creation
-    let featureColors = {{}};
-    let featureNames = {{}};
-
     // Handle drawn features (lines, shapes)
     map.on('draw.create', updateMeasurements);
     map.on('draw.update', updateMeasurements);
-    map.on('draw.delete', deleteFeature);
+    map.on('draw.delete', updateMeasurements);
 
     function updateMeasurements(e) {{
         const data = Draw.getAll();
@@ -139,16 +133,6 @@ mapbox_map_html = f"""
         }}
         window.parent.postMessage(sidebarContent, "*");
     }}
-
-    // Function to handle deletion of features
-    function deleteFeature(e) {{
-        const features = e.features;
-        features.forEach(function(feature) {{
-            delete featureColors[feature.id];
-            delete featureNames[feature.id];
-        }});
-        updateMeasurements();
-    }}
 </script>
 </body>
 </html>
@@ -161,20 +145,38 @@ components.html(mapbox_map_html, height=600)
 if 'measurement_data' not in st.session_state:
     st.session_state['measurement_data'] = ""
 
-# JavaScript listener to capture the messages from the map and send to Streamlit
+# JavaScript listener to capture the messages from the map and update the session state
 components.html(f"""
     <script>
     window.addEventListener('message', function(event) {{
         const messageData = event.data;
         if (typeof messageData === 'string') {{
-            const cleanedMessage = messageData.replace(/\\n/g, "<br>");
-            window.parent.postMessage(cleanedMessage, "*");
+            const streamlitUpdateMessage = {{
+                'type': 'update',
+                'data': messageData
+            }};
+            window.parent.postMessage(streamlitUpdateMessage, "*");
         }}
     }});
     </script>
 """, height=0)
 
-# Display the received message in the sidebar
-if st.session_state['measurement_data']:
+# This part updates the session state and displays the message in the sidebar
+if 'measurement_data' in st.session_state:
     measurement_display.markdown(st.session_state['measurement_data'])
 
+# Use a custom JavaScript message handler to update session state
+def message_handler():
+    components.html("""
+        <script>
+        window.addEventListener('message', (event) => {
+            const messageData = event.data;
+            if (messageData && messageData.type === 'update') {
+                window.parent.postMessage(messageData.data, "*");
+            }
+        });
+        </script>
+    """, height=0)
+
+# Call the handler to listen to JavaScript messages
+message_handler()
