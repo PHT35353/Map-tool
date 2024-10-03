@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import requests
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Individual Colors for Features")
+st.title("Interactive Map Tool with Color Selection for Features")
 
 # Add instructions
 st.markdown("""
@@ -34,6 +34,12 @@ if st.sidebar.button("Search Location"):
 
 # Mapbox GL JS API token
 mapbox_access_token = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
+
+# List of recognized colors for selection
+recognized_colors = [
+    'red', 'blue', 'green', 'yellow', 'purple', 'cyan', 'pink', 'orange', 'black', 'white', 'gray', 
+    '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#800080', '#00FFFF', '#FFC0CB', '#FFA500', '#000000', '#FFFFFF', '#808080'
+]
 
 # HTML and JS for Mapbox with Mapbox Draw plugin to add drawing functionalities
 mapbox_map_html = f"""
@@ -107,14 +113,6 @@ mapbox_map_html = f"""
     let featureColors = {{}};
     let featureNames = {{}};
 
-    // Validate color input function
-    function isValidColor(strColor) {{
-        // Create an option element to validate color string input
-        var s = new Option().style;
-        s.color = strColor;
-        return s.color !== '';  // If it's a valid color, this will be set
-    }}
-
     // Handle drawn features (lines, shapes)
     map.on('draw.create', updateMeasurements);
     map.on('draw.update', updateMeasurements);
@@ -136,10 +134,10 @@ mapbox_map_html = f"""
 
                     // Assign color if not already assigned
                     if (!featureColors[feature.id]) {{
-                        let lineColor = prompt("Enter a color for this line (e.g., #FF0000 for red, blue, cyan):");
+                        let lineColor = prompt("Select a color for this line:", "{', '.join(recognized_colors)}");
                         
-                        // Validate the color before assigning
-                        if (!isValidColor(lineColor)) {{
+                        // If the entered color is not valid, fallback to default blue
+                        if (!recognized_colors.includes(lineColor)) {{
                             alert("Invalid color! Using default blue.");
                             lineColor = 'blue';  // Fallback color if invalid
                         }}
@@ -174,10 +172,10 @@ mapbox_map_html = f"""
 
                     // Assign color if not already assigned
                     if (!featureColors[feature.id]) {{
-                        let markerColor = prompt("Enter a color for this landmark (e.g., #000000 for black, white):");
+                        let markerColor = prompt("Select a color for this landmark:", "{', '.join(recognized_colors)}");
                         
-                        // Validate the color before assigning
-                        if (!isValidColor(markerColor)) {{
+                        // If the entered color is not valid, fallback to default black
+                        if (!recognized_colors.includes(markerColor)) {{
                             alert("Invalid color! Using default black.");
                             markerColor = 'black';  // Fallback color if invalid
                         }}
@@ -205,10 +203,10 @@ mapbox_map_html = f"""
 
                     // Assign color if not already assigned
                     if (!featureColors[feature.id]) {{
-                        let polygonColor = prompt("Enter a color for this polygon (e.g., #00FF00 for green, yellow):");
+                        let polygonColor = prompt("Select a color for this polygon:", "{', '.join(recognized_colors)}");
                         
-                        // Validate the color before assigning
-                        if (!isValidColor(polygonColor)) {{
+                        // If the entered color is not valid, fallback to default yellow
+                        if (!recognized_colors.includes(polygonColor)) {{
                             alert("Invalid color! Using default yellow.");
                             polygonColor = 'yellow';  // Fallback color if invalid
                         }}
