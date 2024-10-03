@@ -44,7 +44,7 @@ initial_view_state = pdk.ViewState(
     latitude=37.7749,  # Default latitude
     longitude=-122.4194,  # Default longitude
     zoom=13,
-    pitch=50,
+    pitch=45,  # Pitch for 3D view
 )
 
 # Layer for lines
@@ -55,6 +55,7 @@ line_layers = [
             {
                 "path": [[line[0][1], line[0][0]], [line[1][1], line[1][0]]],  # [longitude, latitude]
                 "color": st.session_state.color,
+                "width": 5,
             }
             for line in st.session_state.lines
         ],
@@ -76,15 +77,12 @@ point_layers = [
     )
 ]
 
-# Debugging: Print layers to check format
-st.write("Lines Data:", st.session_state.lines)
-st.write("Points Data:", st.session_state.points)
-
 # Create the deck
 try:
     r = pdk.Deck(
         layers=line_layers + point_layers,
         initial_view_state=initial_view_state,
+        map_style="mapbox://styles/mapbox/satellite-v9",  # Satellite view
     )
 except Exception as e:
     st.error(f"Error creating the deck: {e}")
