@@ -314,11 +314,10 @@ components.html(f"""
     <script>
     window.addEventListener('message', function(event) {{
         const messageData = event.data;
-        const streamlitMessage = messageData;
 
-        // Send the message to Streamlit
-        if (streamlitMessage) {{
-            const iframeMessage = JSON.stringify({{ 'type': 'update', 'content': streamlitMessage }});
+        // Send the message to Streamlit only if it's a valid update
+        if (messageData && typeof messageData === 'string') {{
+            const iframeMessage = JSON.stringify({{ 'type': 'update', 'content': messageData }});
             window.parent.postMessage(iframeMessage, "*");
         }}
     }});
@@ -326,4 +325,10 @@ components.html(f"""
 """, height=0)
 
 # Display the received message from the map in the sidebar
-measurement_display.markdown(measurement)
+if 'measurement_data' not in st.session_state:
+    st.session_state['measurement_data'] = ""
+
+# Update measurement data
+if st.session_state['measurement_data']:
+    measurement_display.markdown(st.session_state['measurement_data'])
+
