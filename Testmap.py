@@ -118,32 +118,31 @@ mapbox_map_html = f"""
     function updateMeasurements(e) {{
         const data = Draw.getAll();
         let sidebarContent = "";
-        let totalLength = 0;
-        let totalArea = "";
-
         if (data.features.length > 0) {{
             const features = data.features;
             features.forEach(function(feature, index) {{
                 if (feature.geometry.type === 'LineString') {{
                     const length = turf.length(feature);
-                    totalLength += length;
-
                     const startCoord = feature.geometry.coordinates[0];
                     const endCoord = feature.geometry.coordinates[feature.geometry.coordinates.length - 1];
 
+                    // Identify landmarks for the start and end points of the line
                     let startLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, startCoord) < 0.01);
                     let endLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, endCoord) < 0.01);
 
+                    // Only ask for name once
                     if (!featureNames[feature.id]) {{
                         const name = prompt("Enter a name for this line:");
                         featureNames[feature.id] = name || "Line " + (index + 1);
                     }}
 
+                    // Assign color if not already assigned
                     if (!featureColors[feature.id]) {{
                         const lineColor = prompt("Enter a color for this line (e.g., red, purple, cyan, pink):");
                         featureColors[feature.id] = lineColor || 'blue';
                     }}
 
+                    // Set the line's color
                     map.addLayer({{
                         id: 'line-' + feature.id,
                         type: 'line',
@@ -158,7 +157,47 @@ mapbox_map_html = f"""
                         }}
                     }});
 
-                    sidebarContent += '<p>Line ' + featureNames[feature.id] + ': ' + length.toFixed(2) + ' km</p>';
+                    // Show the line and its association with landmarks
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat(startCoord)
+                        .setHTML('<p>Line belongs to: ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + length.toFixed(2) + ' km</p>')
+                        .addTo(map);
+
+                    sidebarContent += '<p>Line ' + featureNames[feature.id] + ' belongs to ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + ': ' + length.toFixed(2) + ' km</p>';
+                }} else if (feature.geometry.type === 'Point') {{
+                    if (!feature.properties.name) {{
+                        if (!featureNames[feature.id]) {{
+                            const name = prompt("Enter a name for this landmark:");
+                            feature.properties.name = name || "Landmark " + (landmarkCount + 1);
+                            featureNames[feature.id] = feature.properties.name;
+                            landmarks.push(feature);
+                            landmarkCount++;
+                        }} else {{
+                            feature.properties.name = featureNames[feature.id];
+                        }}
+                    }}
+
+                    // Assign color if not already assigned
+                    if (!featureColors[feature.id]) {{
+                        const markerColor = prompt("Enter a color for this landmark (e.g., black, white):");
+                        featureColors[feature.id] = markerColor || 'black';
+                    }}
+
+                    // Set the marker's color
+                    map.addLayer({{
+                        id: 'marker-' + feature.id,
+                        type: 'circle',
+                        source: {{
+                            type: 'geojson',
+                            data: feature
+                        }},
+                        paint: {{
+                            'circle-radius': 8,
+                            'circle-color': featureColors[feature.id]
+                        }}
+                    }});
+
+                    sidebarContent += '<p>Landmark ' + feature.properties.name + '</p>';
                 }} else if (feature.geometry.type === 'Polygon') {{
                     if (!feature.properties.name) {{
                         if (!featureNames[feature.id]) {{
@@ -170,11 +209,13 @@ mapbox_map_html = f"""
                         }}
                     }}
 
+                    // Assign color if not already assigned
                     if (!featureColors[feature.id]) {{
                         const polygonColor = prompt("Enter a color for this polygon (e.g., green, yellow):");
                         featureColors[feature.id] = polygonColor || 'yellow';
                     }}
 
+                    // Set the polygon's color
                     map.addLayer({{
                         id: 'polygon-' + feature.id,
                         type: 'fill',
@@ -192,10 +233,15 @@ mapbox_map_html = f"""
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
                     const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
 
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat(feature.geometry.coordinates[0][0])
+                        .setHTML('<p>Polygon: ' + feature.properties.name + '<br>Width: ' + width.toFixed(2) + ' km, Height: ' + height.toFixed(2) + ' km</p>')
+                        .addTo(map);
+
                     sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
-                    totalArea += '<p>Polygon ' + feature.properties.name + ' Total Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
                 }}
 
+                // Update the color and position of the layer on updates
                 if (map.getLayer('line-' + feature.id)) {{
                     map.getSource('line-' + feature.id).setData(feature);
                 }}
@@ -205,9 +251,8 @@ mapbox_map_html = f"""
                 if (map.getLayer('marker-' + feature.id)) {{
                     map.getSource('marker-' + feature.id).setData(feature);
                 }}
+
             }});
-            sidebarContent += "<p>Total Length of All Lines: " + totalLength.toFixed(2) + " km</p>";
-            sidebarContent += totalArea;
         }} else {{
             sidebarContent = "<p>No features drawn yet.</p>";
         }}
@@ -218,9 +263,11 @@ mapbox_map_html = f"""
     function deleteFeature(e) {{
         const features = e.features;
         features.forEach(function(feature) {{
+            // Remove feature colors and names on deletion
             delete featureColors[feature.id];
             delete featureNames[feature.id];
 
+            // Remove the layer corresponding to the deleted feature
             map.removeLayer('line-' + feature.id);
             map.removeLayer('polygon-' + feature.id);
             map.removeLayer('marker-' + feature.id);
