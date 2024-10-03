@@ -10,10 +10,11 @@ st.title("Interactive Map Tool with 3D Zoomable & Rotatable Mapbox Satellite Vie
 st.markdown("""
 This tool allows you to:
 1. Select an area of the map by drawing a rectangle and customizing its name and color.
-2. Place Circle Markers (with custom names and colors) within the selected area.
-3. Draw lines (pipes) between Circle Markers with customizable names and colors. Each line will display its length both on the map and in the sidebar.
-4. Search for a location by entering latitude and longitude (in the sidebar), or use the address search.
-5. Save your drawings as a GeoJSON file and share them with others, who can load them into the tool.
+2. Place Circle Markers (landmarks) with custom names and colors.
+3. Draw lines (pipes) between Circle Markers, and the lines will be associated with these landmarks.
+4. Show the width and length of drawn rectangles and the length of drawn lines on the map and sidebar.
+5. Save your drawings as a GeoJSON file and load it back.
+6. Search for a location using latitude and longitude, or by entering an address.
 """)
 
 # Sidebar to manage the map interactions
@@ -112,6 +113,9 @@ mapbox_map_html = f"""
     
     map.addControl(Draw);
 
+    let landmarkCount = 0;
+    let landmarks = [];
+
     // Handle drawn features (lines, shapes)
     map.on('draw.create', updateMeasurements);
     map.on('draw.update', updateMeasurements);
@@ -126,18 +130,28 @@ mapbox_map_html = f"""
             features.forEach(function(feature, index) {{
                 if (feature.geometry.type === 'LineString') {{
                     const length = turf.length(feature);
-                    // Show the length in a popup on the map
+                    const startCoord = feature.geometry.coordinates[0];
+                    const endCoord = feature.geometry.coordinates[feature.geometry.coordinates.length - 1];
+
+                    let startLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, startCoord) < 0.01);
+                    let endLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, endCoord) < 0.01);
+                    
                     const popup = new mapboxgl.Popup()
-                        .setLngLat(feature.geometry.coordinates[0])
-                        .setHTML('<p>Line Length: ' + length.toFixed(2) + ' km</p>')
+                        .setLngLat(startCoord)
+                        .setHTML('<p>Line belongs to: ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + length.toFixed(2) + ' km</p>')
                         .addTo(map);
-                    // Update the sidebar
-                    sidebarContent += '<p>Line ' + (index + 1) + ' Length: ' + length.toFixed(2) + ' km</p>';
+                    
+                    sidebarContent += '<p>Line ' + (index + 1) + ': ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + length.toFixed(2) + ' km</p>';
                 }} else if (feature.geometry.type === 'Point') {{
-                    // Placeholder for marker (landmark) customization
-                    sidebarContent += '<p>Landmark ' + (index + 1) + ' created.</p>';
+                    feature.properties.name = prompt("Enter Landmark Name:");
+                    feature.properties.color = prompt("Enter Landmark Color:");
+                    landmarks.push(feature);
+                    sidebarContent += '<p>Landmark ' + (index + 1) + ': ' + feature.properties.name + '</p>';
                 }} else if (feature.geometry.type === 'Polygon') {{
-                    sidebarContent += '<p>Rectangle ' + (index + 1) + ' created.</p>';
+                    const bbox = turf.bbox(feature);
+                    const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
+                    const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
+                    sidebarContent += '<p>Rectangle ' + (index + 1) + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
                 }}
             }});
         }} else {{
@@ -150,7 +164,6 @@ mapbox_map_html = f"""
     window.addEventListener('message', function(event) {{
         if (event.data === 'save_geojson') {{
             const geojson = Draw.getAll();
-            console.log('GeoJSON data being sent:', geojson);  // Debugging message
             window.parent.postMessage(JSON.stringify(geojson), "*");
         }}
     }});
@@ -158,7 +171,6 @@ mapbox_map_html = f"""
     // Load GeoJSON data if uploaded
     {f"""
     const savedGeoJSON = {json.dumps(json.load(saved_geojson))};
-    console.log('Loaded GeoJSON data:', savedGeoJSON);  // Debugging message
     Draw.set(savedGeoJSON);
     """ if saved_geojson else ""}
 </script>
@@ -192,7 +204,6 @@ components.html(
     window.addEventListener('message', function(event) {
         const geojsonData = event.data;
         if (geojsonData) {
-            // Pass the GeoJSON back to Streamlit
             window.parent.postMessage(geojsonData, "*");
         }
     });
