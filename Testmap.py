@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import requests
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Individual Colors and Names for Features")
+st.title("Interactive Map Tool with Individual Colors and Measurements")
 
 # Add instructions and explain color options
 st.markdown("""
@@ -138,18 +138,20 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = lineColor || 'blue';
                     }}
 
-                    map.setPaintProperty(
-                        "custom-line-" + feature.id,
-                        'line-color',
-                        featureColors[feature.id]
-                    );
-                    
+                    // Change color of the line dynamically
+                    map.setFeatureState({{
+                        source: "composite",
+                        id: feature.id
+                    }}, {{
+                        "line-color": featureColors[feature.id]
+                    }});
+
                     const popup = new mapboxgl.Popup()
                         .setLngLat(startCoord)
                         .setHTML('<p>Line: ' + featureNames[feature.id] + '<br>Length: ' + length.toFixed(2) + ' km</p>')
                         .addTo(map);
                     
-                    sidebarContent += '<p>Line ' + featureNames[feature.id] + ': Length = ' + length.toFixed(2) + ' km</p>';
+                    sidebarContent += '<p>' + featureNames[feature.id] + ': ' + length.toFixed(2) + ' km</p>';
                 }} else if (feature.geometry.type === 'Point') {{
                     if (!feature.properties.name) {{
                         if (!featureNames[feature.id]) {{
@@ -169,13 +171,15 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = markerColor || 'black';
                     }}
 
-                    map.setPaintProperty(
-                        "custom-marker-" + feature.id,
-                        'circle-color',
-                        featureColors[feature.id]
-                    );
+                    // Change color of the marker dynamically
+                    map.setFeatureState({{
+                        source: "composite",
+                        id: feature.id
+                    }}, {{
+                        "circle-color": featureColors[feature.id]
+                    }});
 
-                    sidebarContent += '<p>Landmark ' + feature.properties.name + '</p>';
+                    sidebarContent += '<p>Landmark: ' + feature.properties.name + '</p>';
                 }} else if (feature.geometry.type === 'Polygon') {{
                     if (!feature.properties.name) {{
                         if (!featureNames[feature.id]) {{
@@ -193,11 +197,13 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = polygonColor || 'yellow';
                     }}
 
-                    map.setPaintProperty(
-                        "custom-polygon-" + feature.id,
-                        'fill-color',
-                        featureColors[feature.id]
-                    );
+                    // Change color of the polygon dynamically
+                    map.setFeatureState({{
+                        source: "composite",
+                        id: feature.id
+                    }}, {{
+                        "fill-color": featureColors[feature.id]
+                    }});
 
                     const bbox = turf.bbox(feature);
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
@@ -208,7 +214,7 @@ mapbox_map_html = f"""
                         .setHTML('<p>Polygon: ' + feature.properties.name + '<br>Width: ' + width.toFixed(2) + ' km, Height: ' + height.toFixed(2) + ' km</p>')
                         .addTo(map);
                     
-                    sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
+                    sidebarContent += '<p>Polygon: ' + feature.properties.name + ' Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
                 }}
             }});
         }} else {{
