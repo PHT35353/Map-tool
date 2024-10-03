@@ -86,27 +86,29 @@ st.markdown(
         drawnItems.addLayer(layer);
         var coordinates = layer.getLatLngs();
 
-        // Send coordinates back to Streamlit
+        // Send coordinates back to Streamlit via a hidden input field to be captured by Streamlit
         const coords = coordinates.map(latlng => [latlng.lat, latlng.lng]);
-        
-        // Store the coordinates in a hidden input field to be captured by Streamlit
-        window.streamlitApp.send_coords(coords);
+        document.getElementById('drawn_coords').value = JSON.stringify(coords);
+        document.getElementById('drawn_coords').dispatchEvent(new Event('input', {{ bubbles: true }}));
     }});
     </script>
     """,
     unsafe_allow_html=True
 )
 
+# Hidden input field for coordinates (captured by JavaScript and passed to Streamlit)
+drawn_coords = st.text_input("Drawn Coordinates", key="drawn_coords")
+
+# If we have drawn coordinates, update session state
+if drawn_coords:
+    try:
+        coords = json.loads(drawn_coords)
+        st.session_state.lines.append(coords)
+        st.success(f"Line added! Coordinates: {coords}")
+    except json.JSONDecodeError:
+        st.error("Error decoding the drawn coordinates.")
+
 # Display the drawn lines on the map
 if st.session_state.lines:
     for line in st.session_state.lines:
         st.markdown(f"<script>map.addPolyline({json.dumps(line)}, {json.dumps(st.session_state.color)});</script>", unsafe_allow_html=True)
-
-# Function to receive coordinates
-def send_coords(coords):
-    if coords:
-        st.session_state.lines.append(coords)
-        st.success(f"Line added! Coordinates: {coords}")
-
-# Register the function
-st.experimental_singleton(send_coords)
