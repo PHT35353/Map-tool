@@ -8,7 +8,7 @@ import math
 st.set_page_config(page_title="Piping Map Tool", layout="wide")
 
 # Set your Mapbox access token here
-mapbox_token = pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw
+mapbox_token = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
 
 # Initialize Geocoder from Mapbox
 geocoder = Geocoder(access_token=mapbox_token)
