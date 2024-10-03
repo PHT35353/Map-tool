@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import requests
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Customizable Colors & Names")
+st.title("Interactive Map Tool with Individual Colors for Features")
 
 # Add instructions
 st.markdown("""
@@ -31,11 +31,6 @@ address_search = st.sidebar.text_input("Search for address (requires internet co
 # Button to search for a location
 if st.sidebar.button("Search Location"):
     default_location = [latitude, longitude]
-
-# Custom color pickers for tools
-line_color = st.sidebar.color_picker("Pick Line Color", "#FF0000")
-polygon_color = st.sidebar.color_picker("Pick Polygon Color", "#0000FF")
-marker_color = st.sidebar.color_picker("Pick Marker Color", "#00FF00")
 
 # Mapbox GL JS API token
 mapbox_access_token = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
@@ -101,44 +96,6 @@ mapbox_map_html = f"""
             point: true,
             trash: true
         }},
-        styles: [
-            {{
-                "id": "custom-polygon-fill",
-                "type": "fill",
-                "filter": ["all", ["==", "$type", "Polygon"]],
-                "paint": {{
-                    "fill-color": "{polygon_color}",
-                    "fill-opacity": 0.4
-                }}
-            }},
-            {{
-                "id": "custom-polygon-stroke",
-                "type": "line",
-                "filter": ["all", ["==", "$type", "Polygon"]],
-                "paint": {{
-                    "line-color": "{polygon_color}",
-                    "line-width": 2
-                }}
-            }},
-            {{
-                "id": "custom-line-string",
-                "type": "line",
-                "filter": ["all", ["==", "$type", "LineString"]],
-                "paint": {{
-                    "line-color": "{line_color}",
-                    "line-width": 3
-                }}
-            }},
-            {{
-                "id": "custom-point",
-                "type": "circle",
-                "filter": ["all", ["==", "$type", "Point"]],
-                "paint": {{
-                    "circle-radius": 5,
-                    "circle-color": "{marker_color}"
-                }}
-            }}
-        ]
     }});
     
     map.addControl(Draw);
@@ -146,7 +103,8 @@ mapbox_map_html = f"""
     let landmarkCount = 0;
     let landmarks = [];
 
-    // Store names of polygons and markers once during creation
+    // Store names and colors of polygons, lines, and markers once during creation
+    let featureColors = {{}};
     let featureNames = {{}};
 
     // Handle drawn features (lines, shapes)
@@ -167,6 +125,18 @@ mapbox_map_html = f"""
 
                     let startLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, startCoord) < 0.01);
                     let endLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, endCoord) < 0.01);
+
+                    // Assign color if not already assigned
+                    if (!featureColors[feature.id]) {{
+                        const lineColor = prompt("Enter a color for this line (e.g., red, purple, cyan, pink):");
+                        featureColors[feature.id] = lineColor || 'blue';
+                    }}
+
+                    map.setPaintProperty(
+                        `custom-line-${feature.id}`,
+                        'line-color',
+                        featureColors[feature.id]
+                    );
                     
                     const popup = new mapboxgl.Popup()
                         .setLngLat(startCoord)
@@ -176,7 +146,6 @@ mapbox_map_html = f"""
                     sidebarContent += '<p>Line ' + (index + 1) + ': ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + length.toFixed(2) + ' km</p>';
                 }} else if (feature.geometry.type === 'Point') {{
                     if (!feature.properties.name) {{
-                        // Only ask for the name once and store it
                         if (!featureNames[feature.id]) {{
                             const name = prompt("Enter a name for this landmark:");
                             feature.properties.name = name || "Landmark " + (landmarkCount + 1);
@@ -187,10 +156,22 @@ mapbox_map_html = f"""
                             feature.properties.name = featureNames[feature.id];
                         }}
                     }}
+
+                    // Assign color if not already assigned
+                    if (!featureColors[feature.id]) {{
+                        const markerColor = prompt("Enter a color for this landmark (e.g., black, white):");
+                        featureColors[feature.id] = markerColor || 'black';
+                    }}
+
+                    map.setPaintProperty(
+                        `custom-marker-${feature.id}`,
+                        'circle-color',
+                        featureColors[feature.id]
+                    );
+
                     sidebarContent += '<p>' + feature.properties.name + '</p>';
                 }} else if (feature.geometry.type === 'Polygon') {{
                     if (!feature.properties.name) {{
-                        // Only ask for the name once and store it
                         if (!featureNames[feature.id]) {{
                             const name = prompt("Enter a name for this polygon:");
                             feature.properties.name = name || "Polygon " + (index + 1);
@@ -199,6 +180,18 @@ mapbox_map_html = f"""
                             feature.properties.name = featureNames[feature.id];
                         }}
                     }}
+
+                    // Assign color if not already assigned
+                    if (!featureColors[feature.id]) {{
+                        const polygonColor = prompt("Enter a color for this polygon (e.g., green, yellow):");
+                        featureColors[feature.id] = polygonColor || 'yellow';
+                    }}
+
+                    map.setPaintProperty(
+                        `custom-polygon-${feature.id}`,
+                        'fill-color',
+                        featureColors[feature.id]
+                    );
 
                     const bbox = turf.bbox(feature);
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
