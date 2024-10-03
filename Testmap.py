@@ -107,6 +107,14 @@ mapbox_map_html = f"""
     let featureColors = {{}};
     let featureNames = {{}};
 
+    // Validate color input function
+    function isValidColor(strColor) {{
+        // Create an option element to validate color string input
+        var s = new Option().style;
+        s.color = strColor;
+        return s.color !== '';  // If it's a valid color, this will be set
+    }}
+
     // Handle drawn features (lines, shapes)
     map.on('draw.create', updateMeasurements);
     map.on('draw.update', updateMeasurements);
@@ -128,8 +136,15 @@ mapbox_map_html = f"""
 
                     // Assign color if not already assigned
                     if (!featureColors[feature.id]) {{
-                        const lineColor = prompt("Enter a color for this line (e.g., red, purple, cyan, pink):");
-                        featureColors[feature.id] = lineColor || 'blue';
+                        let lineColor = prompt("Enter a color for this line (e.g., #FF0000 for red, blue, cyan):");
+                        
+                        // Validate the color before assigning
+                        if (!isValidColor(lineColor)) {{
+                            alert("Invalid color! Using default blue.");
+                            lineColor = 'blue';  // Fallback color if invalid
+                        }}
+                        
+                        featureColors[feature.id] = lineColor;
                     }}
 
                     map.setPaintProperty(
@@ -159,8 +174,15 @@ mapbox_map_html = f"""
 
                     // Assign color if not already assigned
                     if (!featureColors[feature.id]) {{
-                        const markerColor = prompt("Enter a color for this landmark (e.g., black, white):");
-                        featureColors[feature.id] = markerColor || 'black';
+                        let markerColor = prompt("Enter a color for this landmark (e.g., #000000 for black, white):");
+                        
+                        // Validate the color before assigning
+                        if (!isValidColor(markerColor)) {{
+                            alert("Invalid color! Using default black.");
+                            markerColor = 'black';  // Fallback color if invalid
+                        }}
+                        
+                        featureColors[feature.id] = markerColor;
                     }}
 
                     map.setPaintProperty(
@@ -183,8 +205,15 @@ mapbox_map_html = f"""
 
                     // Assign color if not already assigned
                     if (!featureColors[feature.id]) {{
-                        const polygonColor = prompt("Enter a color for this polygon (e.g., green, yellow):");
-                        featureColors[feature.id] = polygonColor || 'yellow';
+                        let polygonColor = prompt("Enter a color for this polygon (e.g., #00FF00 for green, yellow):");
+                        
+                        // Validate the color before assigning
+                        if (!isValidColor(polygonColor)) {{
+                            alert("Invalid color! Using default yellow.");
+                            polygonColor = 'yellow';  // Fallback color if invalid
+                        }}
+                        
+                        featureColors[feature.id] = polygonColor;
                     }}
 
                     map.setPaintProperty(
@@ -226,7 +255,7 @@ if address_search:
         response = requests.get(geocode_url)
         if response.status_code == 200:
             geo_data = response.json()
-            if len(geo_data['features']) > 0:  # Fix the unmatched parenthesis here
+            if len(geo_data['features']) > 0:
                 coordinates = geo_data['features'][0]['center']
                 latitude, longitude = coordinates[1], coordinates[0]
                 st.sidebar.success(f"Address found: {geo_data['features'][0]['place_name']}")
