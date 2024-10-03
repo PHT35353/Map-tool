@@ -148,7 +148,6 @@ mapbox_map_html = f"""
 
     // Send GeoJSON data to Streamlit when requested
     window.addEventListener('message', function(event) {{
-        console.log('Message received:', event.data);  // Debugging message
         if (event.data === 'save_geojson') {{
             const geojson = Draw.getAll();
             console.log('GeoJSON data being sent:', geojson);  // Debugging message
@@ -181,7 +180,7 @@ if "save_geojson" in st.session_state:
         height=0
     )
 
-# Callback to handle the received GeoJSON data
+# JavaScript callback function to capture the GeoJSON and trigger the download
 def js_callback(data):
     geojson = json.loads(data)
     st.download_button(label="Download GeoJSON", data=json.dumps(geojson), file_name="drawings.geojson", mime="application/json")
@@ -192,7 +191,10 @@ components.html(
     <script>
     window.addEventListener('message', function(event) {
         const geojsonData = event.data;
-        window.parent.postMessage(geojsonData, "*");
+        if (geojsonData) {
+            // Pass the GeoJSON back to Streamlit
+            window.parent.postMessage(geojsonData, "*");
+        }
     });
     </script>
     """,
