@@ -35,6 +35,12 @@ address_search = st.sidebar.text_input("Search for address (requires internet co
 if st.sidebar.button("Search Location"):
     default_location = [latitude, longitude]
 
+# Initialize an empty dictionary to store measurements (width, height, and distance)
+measurements = {"lines": [], "polygons": []}
+
+# Streamlit component to receive sidebar content from JavaScript
+sidebar_content = st.empty()
+
 # Mapbox GL JS API token
 mapbox_access_token = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
 
@@ -118,6 +124,8 @@ mapbox_map_html = f"""
     function updateMeasurements(e) {{
         const data = Draw.getAll();
         let sidebarContent = "";
+        let sidebarMeasurements = {{ lines: [], polygons: [] }};
+        
         if (data.features.length > 0) {{
             const features = data.features;
             features.forEach(function(feature, index) {{
@@ -164,40 +172,7 @@ mapbox_map_html = f"""
                         .addTo(map);
                     
                     sidebarContent += '<p>Line ' + featureNames[feature.id] + ' belongs to ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + ': ' + length.toFixed(2) + ' km</p>';
-                }} else if (feature.geometry.type === 'Point') {{
-                    if (!feature.properties.name) {{
-                        if (!featureNames[feature.id]) {{
-                            const name = prompt("Enter a name for this landmark:");
-                            feature.properties.name = name || "Landmark " + (landmarkCount + 1);
-                            featureNames[feature.id] = feature.properties.name;
-                            landmarks.push(feature);
-                            landmarkCount++;
-                        }} else {{
-                            feature.properties.name = featureNames[feature.id];
-                        }}
-                    }}
-
-                    // Assign color if not already assigned
-                    if (!featureColors[feature.id]) {{
-                        const markerColor = prompt("Enter a color for this landmark (e.g., black, white):");
-                        featureColors[feature.id] = markerColor || 'black';
-                    }}
-
-                    // Set the marker's color
-                    map.addLayer({{
-                        id: 'marker-' + feature.id,
-                        type: 'circle',
-                        source: {{
-                            type: 'geojson',
-                            data: feature
-                        }},
-                        paint: {{
-                            'circle-radius': 8,
-                            'circle-color': featureColors[feature.id]
-                        }}
-                    }});
-
-                    sidebarContent += '<p>Landmark ' + feature.properties.name + '</p>';
+                    sidebarMeasurements.lines.push('Line ' + featureNames[feature.id] + ': ' + length.toFixed(2) + ' km');
                 }} else if (feature.geometry.type === 'Polygon') {{
                     if (!feature.properties.name) {{
                         if (!featureNames[feature.id]) {{
@@ -239,6 +214,7 @@ mapbox_map_html = f"""
                         .addTo(map);
                     
                     sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
+                    sidebarMeasurements.polygons.push('Polygon ' + feature.properties.name + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km');
                 }}
 
                 // Update the color and position of the layer on updates
@@ -251,12 +227,13 @@ mapbox_map_html = f"""
                 if (map.getLayer('marker-' + feature.id)) {{
                     map.getSource('marker-' + feature.id).setData(feature);
                 }}
-
             }});
         }} else {{
             sidebarContent = "<p>No features drawn yet.</p>";
         }}
-        window.parent.postMessage(sidebarContent, "*");
+        
+        // Send data to Streamlit for sidebar
+        window.parent.postMessage(sidebarMeasurements, "*");
     }}
 
     // Function to handle deletion of features
@@ -282,22 +259,7 @@ mapbox_map_html = f"""
 # Render the Mapbox 3D Satellite map with drawing functionality and custom features
 components.html(mapbox_map_html, height=600)
 
-# Address search using Mapbox Geocoding API
-if address_search:
-    geocode_url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{address_search}.json?access_token={mapbox_access_token}"
-    # Request the geocoded location
-    try:
-        response = requests.get(geocode_url)
-        if response.status_code == 200:
-            geo_data = response.json()
-            if len(geo_data['features']) > 0:
-                coordinates = geo_data['features'][0]['center']
-                latitude, longitude = coordinates[1], coordinates[0]
-                st.sidebar.success(f"Address found: {geo_data['features'][0]['place_name']}")
-                st.sidebar.write(f"Coordinates: Latitude {latitude}, Longitude {longitude}")
-            else:
-                st.sidebar.error("Address not found.")
-        else:
-            st.sidebar.error("Error connecting to the Mapbox API.")
-    except Exception as e:
-        st.sidebar.error(f"Error: {e}")
+# Receive the data sent from JavaScript and display in the sidebar
+message = st.experimental_get_query_params().get('message')
+if message:
+    sidebar_content.markdown(f"### Measurements:\n\n{message}")
