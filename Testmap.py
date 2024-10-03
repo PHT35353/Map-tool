@@ -9,8 +9,8 @@ st.title("Interactive Map Tool with 3D Zoomable & Rotatable Mapbox Satellite Vie
 # Add instructions
 st.markdown("""
 This tool allows you to:
-1. Select an area of the map by drawing a rectangle and customize its name and color.
-2. Place Circle Markers (landmarks) with custom names and colors using a palette.
+1. Select an area of the map by drawing a rectangle and customize its name.
+2. Place Circle Markers (landmarks) with custom names.
 3. Draw lines (pipes) between Circle Markers, and the lines will be associated with these landmarks.
 4. Show the width and length of drawn rectangles and the length of drawn lines on the map and sidebar.
 5. Save your drawings as a GeoJSON file and load it back.
@@ -46,9 +46,6 @@ saved_geojson = st.sidebar.file_uploader("Upload GeoJSON", type=["geojson"])
 
 if st.sidebar.button("Save Drawings as GeoJSON"):
     st.session_state["save_geojson"] = True
-
-# Color palette selection
-selected_color = st.sidebar.color_picker("Select Landmark/Line/Rectangle Color", "#FF0000")
 
 # HTML and JS for Mapbox with Mapbox Draw plugin to add drawing functionalities
 mapbox_map_html = f"""
@@ -124,7 +121,6 @@ mapbox_map_html = f"""
     map.on('draw.update', updateMeasurements);
     map.on('draw.delete', updateMeasurements);
 
-    // Display distances and allow color/naming customization in the sidebar
     function updateMeasurements(e) {{
         const data = Draw.getAll();
         let sidebarContent = "";
@@ -145,13 +141,11 @@ mapbox_map_html = f"""
                         .addTo(map);
                     
                     sidebarContent += '<p>Line ' + (index + 1) + ': ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + length.toFixed(2) + ' km</p>';
-                }} else if (feature.geometry.type === 'Point') {{
-                    if (!feature.properties.name) {{
-                        feature.properties.name = prompt("Enter Landmark Name:");
-                    }}
-                    feature.properties.color = "{selected_color}";
+                }} else if (feature.geometry.type === 'Point' && !feature.properties.name) {{
+                    feature.properties.name = "Landmark " + (landmarkCount + 1);
                     landmarks.push(feature);
-                    sidebarContent += '<p>Landmark ' + (index + 1) + ': ' + feature.properties.name + '</p>';
+                    sidebarContent += '<p>Landmark ' + (landmarkCount + 1) + ': ' + feature.properties.name + '</p>';
+                    landmarkCount++;
                 }} else if (feature.geometry.type === 'Polygon') {{
                     const bbox = turf.bbox(feature);
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
