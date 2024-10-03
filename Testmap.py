@@ -28,7 +28,7 @@ map_styles = {
 location = st.sidebar.text_input("Search for a location", "New York, USA")
 
 # Zoom level for the map
-zoom_level = st.sidebar.slider("Select zoom level", 1, 20, 10)
+zoom_level = st.sidebar.slider("Select zoom level", 1, 20, 15)
 
 # Initialize mapbox-gl-draw features (Lines, Points, Areas)
 draw_mode = st.sidebar.selectbox(
@@ -43,7 +43,7 @@ color = st.sidebar.color_picker("Pick a color for the drawing")
 response = geocoder.forward(location).geojson()
 coordinates = response['features'][0]['geometry']['coordinates']
 
-# Initialize Pydeck Map with satellite view
+# Create a Pydeck map with 3D buildings
 st.pydeck_chart(
     pdk.Deck(
         map_style=map_styles[map_style],
@@ -51,9 +51,21 @@ st.pydeck_chart(
             latitude=coordinates[1],
             longitude=coordinates[0],
             zoom=zoom_level,
-            pitch=60,
+            pitch=60,  # Tilt to show 3D buildings
             bearing=0
         ),
+        layers=[
+            pdk.Layer(
+                "GeoJsonLayer",
+                data="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/examples/3d-building/3d-buildings.json",  # Example 3D building data
+                extruded=True,
+                wireframe=True,
+                get_fill_color=[255, 255, 255],
+                get_line_color=[0, 0, 0],
+                get_elevation="height",
+            )
+        ],
+        mapbox_key=mapbox_token
     )
 )
 
@@ -68,16 +80,16 @@ canvas = st_canvas(
     key="canvas",
 )
 
-# Function to calculate distance between two points
+# Function to calculate distance between two points (Haversine formula)
 def calculate_distance(coord1, coord2):
-    R = 6371000  # radius of Earth in meters
+    R = 6371000  # Radius of Earth in meters
     lat1, lon1 = math.radians(coord1[0]), math.radians(coord1[1])
     lat2, lon2 = math.radians(coord2[0]), math.radians(coord2[1])
     dlat = lat2 - lat1
     dlon = lon2 - lon1
     a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c  # distance in meters
+    return R * c  # Distance in meters
 
 # Show the drawn lines and calculate distances
 if canvas.image_data is not None:
@@ -114,5 +126,17 @@ st.pydeck_chart(
             pitch=60,
             bearing=rotate_angle
         ),
+        layers=[
+            pdk.Layer(
+                "GeoJsonLayer",
+                data="https://raw.githubusercontent.com/uber-common/deck.gl-data/master/examples/3d-building/3d-buildings.json",  # Example 3D building data
+                extruded=True,
+                wireframe=True,
+                get_fill_color=[255, 255, 255],
+                get_line_color=[0, 0, 0],
+                get_elevation="height",
+            )
+        ],
+        mapbox_key=mapbox_token
     )
 )
