@@ -10,12 +10,12 @@ st.markdown("""
 This tool allows you to:
 1. Draw rectangles (polygons), lines, and markers (landmarks) on the map.
 2. Assign names and choose specific colors for each feature individually upon creation.
-3. Display distances for lines and dimensions for polygons both on the map and in the sidebar.
+3. Display distances for lines and dimensions for polygons in the sidebar.
 4. Show relationships between landmarks and lines (e.g., a line belongs to two landmarks).
 
 **Available Colors**:
-- Named colors: `red`, `blue`, `green`, `yellow`, `purple`, `cyan`, `pink`, `orange`, `black`, `white`, `gray`
-- Hex colors: `#FF0000` (red), `#00FF00` (green), `#0000FF` (blue), `#FFFF00` (yellow), `#800080` (purple), `#00FFFF` (cyan), `#FFC0CB` (pink), `#FFA500` (orange), `#000000` (black), `#FFFFFF` (white), `#808080` (gray)
+- Named colors: red, blue, green, yellow, purple, cyan, pink, orange, black, white, gray
+- Hex colors: #FF0000 (red), #00FF00 (green), #0000FF (blue), #FFFF00 (yellow), #800080 (purple), #00FFFF (cyan), #FFC0CB (pink), #FFA500 (orange), #000000 (black), #FFFFFF (white), #808080 (gray)
 """)
 
 # Sidebar to manage the map interactions
@@ -35,14 +35,9 @@ address_search = st.sidebar.text_input("Search for address (requires internet co
 if st.sidebar.button("Search Location"):
     default_location = [latitude, longitude]
 
-# Sidebar section for displaying measurements
-st.sidebar.title("Measurements")
-measurement_display = st.sidebar.empty()  # Placeholder for the measurements
-
-# Mapbox GL JS API token
+# HTML and JS for Mapbox with Mapbox Draw plugin to add drawing functionalities
 mapbox_access_token = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
 
-# HTML and JS for Mapbox with Mapbox Draw plugin to add drawing functionalities
 mapbox_map_html = f"""
 <!DOCTYPE html>
 <html>
@@ -75,7 +70,7 @@ mapbox_map_html = f"""
 <div id="map"></div>
 <script>
     mapboxgl.accessToken = '{mapbox_access_token}';
-    
+
     const map = new mapboxgl.Map({{
         container: 'map',
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
@@ -104,13 +99,20 @@ mapbox_map_html = f"""
             trash: true
         }},
     }});
-    
+
     map.addControl(Draw);
+
+    let landmarkCount = 0;
+    let landmarks = [];
+
+    // Store names and colors of polygons, lines, and markers once during creation
+    let featureColors = {{}};
+    let featureNames = {{}};
 
     // Handle drawn features (lines, shapes)
     map.on('draw.create', updateMeasurements);
     map.on('draw.update', updateMeasurements);
-    map.on('draw.delete', updateMeasurements);
+    map.on('draw.delete', deleteFeature);
 
     function updateMeasurements(e) {{
         const data = Draw.getAll();
@@ -120,63 +122,81 @@ mapbox_map_html = f"""
             features.forEach(function(feature, index) {{
                 if (feature.geometry.type === 'LineString') {{
                     const length = turf.length(feature);
-                    sidebarContent += f"Line {index + 1}: Length = {round(length, 2)} km<br>";
+                    const startCoord = feature.geometry.coordinates[0];
+                    const endCoord = feature.geometry.coordinates[feature.geometry.coordinates.length - 1];
+
+                    // Identify landmarks for the start and end points of the line
+                    let startLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, startCoord) < 0.01);
+                    let endLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, endCoord) < 0.01);
+
+                    // Only ask for name once
+                    if (!featureNames[feature.id]) {{
+                        const name = prompt("Enter a name for this line:");
+                        featureNames[feature.id] = name || "Line " + (index + 1);
+                    }}
+
+                    // Assign color if not already assigned
+                    if (!featureColors[feature.id]) {{
+                        const lineColor = prompt("Enter a color for this line (e.g., red, purple, cyan, pink):");
+                        featureColors[feature.id] = lineColor || 'blue';
+                    }}
+
+                    sidebarContent += '<p>Line ' + featureNames[feature.id] + ' (Length: ' + length.toFixed(2) + ' km)</p>';
                 }} else if (feature.geometry.type === 'Polygon') {{
+                    if (!featureNames[feature.id]) {{
+                        const name = prompt("Enter a name for this polygon:");
+                        featureNames[feature.id] = name || "Polygon " + (index + 1);
+                    }}
+
+                    // Assign color if not already assigned
+                    if (!featureColors[feature.id]) {{
+                        const polygonColor = prompt("Enter a color for this polygon (e.g., green, yellow):");
+                        featureColors[feature.id] = polygonColor || 'yellow';
+                    }}
+
                     const bbox = turf.bbox(feature);
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
                     const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
-                    sidebarContent += f"Polygon {index + 1}: Width = {round(width, 2)} km, Height = {round(height, 2)} km<br>";
+
+                    sidebarContent += '<p>Polygon ' + featureNames[feature.id] + ' (Width: ' + width.toFixed(2) + ' km, Height: ' + height.toFixed(2) + ' km)</p>';
                 }}
             }});
         }} else {{
-            sidebarContent = "No features drawn yet.";
+            sidebarContent = "<p>No features drawn yet.</p>";
         }}
         window.parent.postMessage(sidebarContent, "*");
+    }}
+
+    // Function to handle deletion of features
+    function deleteFeature(e) {{
+        const features = e.features;
+        features.forEach(function(feature) {{
+            // Remove feature colors and names on deletion
+            delete featureColors[feature.id];
+            delete featureNames[feature.id];
+        }});
+        updateMeasurements();
     }}
 </script>
 </body>
 </html>
 """
 
-# Render the Mapbox 3D Satellite map with drawing functionality and custom features
+# Render the Mapbox map
 components.html(mapbox_map_html, height=600)
 
-# Placeholder to store measurement data
-if 'measurement_data' not in st.session_state:
-    st.session_state['measurement_data'] = ""
+# Create a placeholder for the sidebar content to display the measurements
+sidebar_placeholder = st.sidebar.empty()
 
-# JavaScript listener to capture the messages from the map and send to Streamlit
+# JavaScript listener to capture the message from the map and display it in the sidebar
 components.html(f"""
-    <script>
-    window.addEventListener('message', function(event) {{
-        const messageData = event.data;
-        if (typeof messageData === 'string') {{
-            const streamlitUpdateMessage = {{
-                'type': 'update',
-                'data': messageData
-            }};
-            window.parent.postMessage(streamlitUpdateMessage, "*");
-        }}
-    }});
-    </script>
+<script>
+window.addEventListener('message', (event) => {{
+    const sidebarContent = event.data;
+    const sidebarElement = window.parent.document.querySelector('.stSidebar .element-container');
+    if (sidebarElement) {{
+        sidebarElement.innerHTML = sidebarContent;
+    }}
+}}, false);
+</script>
 """, height=0)
-
-# This part updates the session state and displays the message in the sidebar
-if 'measurement_data' in st.session_state:
-    measurement_display.markdown(st.session_state['measurement_data'])
-
-# Use a custom JavaScript message handler to update session state
-def message_handler():
-    components.html("""
-        <script>
-        window.addEventListener('message', (event) => {
-            const messageData = event.data;
-            if (messageData && messageData.type === 'update') {
-                window.parent.postMessage(messageData.data, "*");
-            }
-        });
-        </script>
-    """, height=0)
-
-# Call the handler to listen to JavaScript messages
-message_handler()
