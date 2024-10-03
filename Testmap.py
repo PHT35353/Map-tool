@@ -118,6 +118,9 @@ mapbox_map_html = f"""
     let landmarkCount = 0;
     let landmarks = [];
 
+    // Store names of polygons and markers once during creation
+    let featureNames = {};
+
     // Handle drawn features (lines, shapes)
     map.on('draw.create', updateMeasurements);
     map.on('draw.update', updateMeasurements);
@@ -143,19 +146,35 @@ mapbox_map_html = f"""
                         .addTo(map);
                     
                     sidebarContent += '<p>Line ' + (index + 1) + ': ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + length.toFixed(2) + ' km</p>';
-                }} else if (feature.geometry.type === 'Point' && !feature.properties.name) {{
-                    const name = prompt("Enter a name for this landmark:");
-                    feature.properties.name = name || "Landmark " + (landmarkCount + 1);
-                    landmarks.push(feature);
-                    sidebarContent += '<p>Landmark ' + (landmarkCount + 1) + ': ' + feature.properties.name + '</p>';
-                    landmarkCount++;
+                }} else if (feature.geometry.type === 'Point') {{
+                    if (!feature.properties.name) {{
+                        // Only ask for the name once and store it
+                        if (!featureNames[feature.id]) {{
+                            const name = prompt("Enter a name for this landmark:");
+                            feature.properties.name = name || "Landmark " + (landmarkCount + 1);
+                            featureNames[feature.id] = feature.properties.name;
+                            landmarks.push(feature);
+                            landmarkCount++;
+                        }} else {{
+                            feature.properties.name = featureNames[feature.id];
+                        }}
+                    }}
+                    sidebarContent += '<p>' + feature.properties.name + '</p>';
                 }} else if (feature.geometry.type === 'Polygon') {{
+                    if (!feature.properties.name) {{
+                        // Only ask for the name once and store it
+                        if (!featureNames[feature.id]) {{
+                            const name = prompt("Enter a name for this polygon:");
+                            feature.properties.name = name || "Polygon " + (index + 1);
+                            featureNames[feature.id] = feature.properties.name;
+                        }} else {{
+                            feature.properties.name = featureNames[feature.id];
+                        }}
+                    }}
+
                     const bbox = turf.bbox(feature);
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
                     const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
-                    
-                    const name = prompt("Enter a name for this polygon:");
-                    feature.properties.name = name || "Rectangle " + (index + 1);
                     
                     const popup = new mapboxgl.Popup()
                         .setLngLat(feature.geometry.coordinates[0][0])
