@@ -13,8 +13,7 @@ This tool allows you to:
 2. Place Circle Markers (landmarks) with custom names.
 3. Draw lines (pipes) between Circle Markers, and the lines will be associated with these landmarks.
 4. Show the width and length of drawn rectangles and the length of drawn lines on the map and sidebar.
-5. Save your drawings as a GeoJSON file and load it back.
-6. Search for a location using latitude and longitude, or by entering an address.
+5. Search for a location using latitude and longitude, or by entering an address.
 """)
 
 # Sidebar to manage the map interactions
@@ -39,13 +38,6 @@ fullscreen_control = True
 
 # Mapbox GL JS API token
 mapbox_access_token = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
-
-# Save and load GeoJSON functionality in the sidebar
-st.sidebar.title("Save and Load Drawings")
-saved_geojson = st.sidebar.file_uploader("Upload GeoJSON", type=["geojson"])
-
-if st.sidebar.button("Save Drawings as GeoJSON"):
-    st.session_state["save_geojson"] = True
 
 # HTML and JS for Mapbox with Mapbox Draw plugin to add drawing functionalities
 mapbox_map_html = f"""
@@ -165,14 +157,6 @@ mapbox_map_html = f"""
         window.parent.postMessage(sidebarContent, "*");
     }}
 
-    // Send GeoJSON data to Streamlit when requested
-    window.addEventListener('message', function(event) {{
-        if (event.data === 'save_geojson') {{
-            const geojson = Draw.getAll();
-            window.parent.postMessage(JSON.stringify(geojson), "*");
-        }}
-    }});
-
     // Load GeoJSON data if uploaded
     {f"""
     const savedGeoJSON = {json.dumps(json.load(saved_geojson))};
@@ -185,37 +169,6 @@ mapbox_map_html = f"""
 
 # Render the Mapbox 3D Satellite map with drawing functionality and custom features
 components.html(mapbox_map_html, height=600)
-
-# Handle saving the GeoJSON from JavaScript
-if "save_geojson" in st.session_state:
-    components.html(
-        """
-        <script>
-        window.parent.postMessage("save_geojson", "*");
-        </script>
-        """,
-        height=0
-    )
-
-# JavaScript callback function to capture the GeoJSON and trigger the download
-def js_callback(data):
-    geojson = json.loads(data)
-    st.download_button(label="Download GeoJSON", data=json.dumps(geojson), file_name="drawings.geojson", mime="application/json")
-    del st.session_state["save_geojson"]
-
-components.html(
-    """
-    <script>
-    window.addEventListener('message', function(event) {
-        const geojsonData = event.data;
-        if (geojsonData) {
-            window.parent.postMessage(geojsonData, "*");
-        }
-    });
-    </script>
-    """,
-    height=0
-)
 
 # Address search using Mapbox Geocoding API
 if address_search:
