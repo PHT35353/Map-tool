@@ -14,8 +14,8 @@ This tool allows you to:
 4. Show relationships between landmarks and lines (e.g., a line belongs to two landmarks).
 
 **Available Colors**:
-- Named colors: red, blue, green, yellow, purple, cyan, pink, orange, black, white, gray
-- Hex colors: #FF0000 (red), #00FF00 (green), #0000FF (blue), #FFFF00 (yellow), #800080 (purple), #00FFFF (cyan), #FFC0CB (pink), #FFA500 (orange), #000000 (black), #FFFFFF (white), #808080 (gray)
+- Named colors: `red`, `blue`, `green`, `yellow`, `purple`, `cyan`, `pink`, `orange`, `black`, `white`, `gray`
+- Hex colors: `#FF0000` (red), `#00FF00` (green), `#0000FF` (blue), `#FFFF00` (yellow), `#800080` (purple), `#00FFFF` (cyan), `#FFC0CB` (pink), `#FFA500` (orange), `#000000` (black), `#FFFFFF` (white), `#808080` (gray)
 """)
 
 # Sidebar to manage the map interactions
@@ -34,6 +34,10 @@ address_search = st.sidebar.text_input("Search for address (requires internet co
 # Button to search for a location
 if st.sidebar.button("Search Location"):
     default_location = [latitude, longitude]
+
+# Sidebar section for displaying measurements
+st.sidebar.title("Measurements")
+distance_info = st.sidebar.empty()
 
 # Mapbox GL JS API token
 mapbox_access_token = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
@@ -301,3 +305,23 @@ if address_search:
             st.sidebar.error("Error connecting to the Mapbox API.")
     except Exception as e:
         st.sidebar.error(f"Error: {e}")
+
+# Placeholder for receiving and displaying sidebar content from JavaScript
+message_received = st.empty()
+
+# JavaScript communication listener for the sidebar content
+components.html(f"""
+    <script>
+    window.addEventListener('message', function(event) {{
+        const messageData = event.data;
+        const streamlitMessage = messageData;
+        if (streamlitMessage) {{
+            window.parent.postMessage({{'type': 'streamlit-message', 'content': streamlitMessage}}, "*");
+        }}
+    }});
+    </script>
+""")
+
+# Displaying the content in the sidebar (width, height, distances)
+if st.session_state.get('streamlit-message'):
+    message_received.markdown(st.session_state['streamlit-message'])
