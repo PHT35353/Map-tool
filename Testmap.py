@@ -1,64 +1,115 @@
 import streamlit as st
 import pydeck as pdk
-from mapbox import Geocoder
+import pandas as pd
+import numpy as np
 
-# Configure the Streamlit page layout
-st.set_page_config(page_title="Piping Map Tool", layout="wide")  # Use wide layout
+# Set your Mapbox access token
+MAPBOX_ACCESS_TOKEN = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
 
-# Set your Mapbox access token here
-mapbox_token = "your_mapbox_token_here"
+# Initialize state variables
+if 'lines' not in st.session_state:
+    st.session_state.lines = []
+if 'points' not in st.session_state:
+    st.session_state.points = []
+if 'color' not in st.session_state:
+    st.session_state.color = [255, 0, 0]  # Default color (red)
 
-# Set the Mapbox token via Streamlit session state
-st.session_state["mapbox_api_key"] = mapbox_token
+# Function to calculate distance in meters
+def calculate_distance(point1, point2):
+    # Haversine formula to calculate distance between two points
+    lat1, lon1 = np.radians(point1)
+    lat2, lon2 = np.radians(point2)
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2)**2
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+    r = 6371000  # Radius of Earth in meters
+    return c * r
 
-# Initialize Geocoder from Mapbox
-geocoder = Geocoder(access_token=mapbox_token)
+# Function to handle line drawing
+def add_line(start, end):
+    st.session_state.lines.append((start, end))
 
-# Sidebar for user options
-st.sidebar.header("Piping Map Tool")
-st.sidebar.markdown("Select options below:")
+# Function to clear lines
+def clear_lines():
+    st.session_state.lines = []
 
-# Option for satellite or street view
-map_style = st.sidebar.radio("Choose Map Style", ("Satellite", "Street View"))
-map_styles = {
-    "Satellite": "mapbox://styles/mapbox/satellite-v9",
-    "Street View": "mapbox://styles/mapbox/streets-v11"
-}
+# Streamlit layout
+st.title("Industrial Piping Tool")
 
-# Allow user to search for a location
-location = st.sidebar.text_input("Search for a location", "New York, USA")
+# Map configuration
+initial_view_state = pdk.ViewState(
+    latitude=37.7749,  # Default latitude
+    longitude=-122.4194,  # Default longitude
+    zoom=13,
+    pitch=50,
+)
 
-# Zoom level for the map
-zoom_level = st.sidebar.slider("Select zoom level", 1, 20, 15)
+# Layer for lines
+line_layers = [
+    pdk.Layer(
+        "PathLayer",
+        data=[{"path": [line[0], line[1]], "color": st.session_state.color} for line in st.session_state.lines],
+        get_color="color",
+        width_scale=20,
+        width_min_pixels=5,
+    )
+]
 
-try:
-    # Get the location coordinates from search
-    response = geocoder.forward(location).geojson()
-    coordinates = response['features'][0]['geometry']['coordinates']
-    st.write(f"Coordinates for {location}: {coordinates}")
-except Exception as e:
-    st.error(f"Error fetching coordinates: {e}")
-    coordinates = [-74.0060, 40.7128]  # Fallback to default coordinates (New York City)
+# Layer for points
+point_layers = [
+    pdk.Layer(
+        "ScatterplotLayer",
+        data=st.session_state.points,
+        get_position="[longitude, latitude]",
+        get_color="[255, 0, 0, 160]",
+        get_radius=200,
+        pickable=True,
+    )
+]
 
-# Create a wide column to center the map and make it full-width
-st.write("---")  # Divider
+# Create the deck
+r = pdk.Deck(
+    layers=line_layers + point_layers,
+    initial_view_state=initial_view_state,
+    mapbox_key=MAPBOX_ACCESS_TOKEN,
+)
 
-# Center the map by using Streamlit's column feature
-col1, col2, col3 = st.columns([1, 6, 1])  # Create 3 columns, middle one wider
-with col2:
-    # Simplified Pydeck map without 3D buildings
+# Display the map
+st.pydeck_chart(r)
+
+# Input for adding points and lines
+st.subheader("Draw Lines Between Points")
+start_point = st.text_input("Start Point (latitude,longitude)", "37.7749,-122.4194")
+end_point = st.text_input("End Point (latitude,longitude)", "37.7750,-122.4183")
+if st.button("Add Line"):
     try:
-        st.pydeck_chart(
-            pdk.Deck(
-                map_style=map_styles[map_style],
-                initial_view_state=pdk.ViewState(
-                    latitude=coordinates[1],  # Latitude
-                    longitude=coordinates[0],  # Longitude
-                    zoom=zoom_level,
-                    pitch=45,  # Add pitch for a slight 3D effect
-                    bearing=0
-                )
-            )
-        )
-    except Exception as e:
-        st.error(f"Error rendering the map: {e}")
+        start_coords = [float(coord) for coord in start_point.split(",")]
+        end_coords = [float(coord) for coord in end_point.split(",")]
+        add_line(start_coords, end_coords)
+        distance = calculate_distance(start_coords, end_coords)
+        st.success(f"Line added! Distance: {distance:.2f} meters")
+    except ValueError:
+        st.error("Please enter valid latitude and longitude values.")
+
+# Input for adding landmarks
+landmark_input = st.text_input("Add Landmark (latitude,longitude)", "37.7750,-122.4190")
+if st.button("Add Landmark"):
+    try:
+        landmark_coords = [float(coord) for coord in landmark_input.split(",")]
+        st.session_state.points.append({"longitude": landmark_coords[1], "latitude": landmark_coords[0]})
+        st.success("Landmark added!")
+    except ValueError:
+        st.error("Please enter valid latitude and longitude values.")
+
+# Option to clear lines
+if st.button("Clear Lines"):
+    clear_lines()
+    st.success("All lines cleared.")
+
+# Color customization
+st.subheader("Customize Line Color")
+red = st.slider("Red", 0, 255, 255)
+green = st.slider("Green", 0, 255, 0)
+blue = st.slider("Blue", 0, 255, 0)
+st.session_state.color = [red, green, blue]
