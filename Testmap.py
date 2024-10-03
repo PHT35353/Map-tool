@@ -214,6 +214,12 @@ mapbox_map_html = f"""
         }});
         updateMeasurements();
     }}
+
+    // Listen for messages from the map and update the sidebar
+    window.addEventListener("message", function(event) {{
+        const sidebarData = event.data;
+        window.parent.postMessage(sidebarData, "*");
+    }});
 </script>
 </body>
 </html>
@@ -243,11 +249,6 @@ if address_search:
         st.sidebar.error(f"Error: {e}")
 
 # This will receive the measurements from the JavaScript code and display it in the sidebar
-components.iframe("about:blank", height=0)  # Invisible iframe to receive sidebar content
-
-st.sidebar.text("Feature Measurements:")
-
-# Capture the measurement data posted from the JavaScript in the map component
-data_received = st.experimental_js_receive("message")
-if data_received:
-    sidebar_placeholder.markdown(data_received)  # Display the content from the JS map
+sidebar_content = st.session_state.get("sidebar_content", "")
+if sidebar_content:
+    sidebar_placeholder.markdown(sidebar_content)
