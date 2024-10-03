@@ -8,6 +8,9 @@ st.set_page_config(page_title="Piping Map Tool", layout="wide")
 # Set your Mapbox access token here
 mapbox_token = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
 
+# Set the Mapbox token via Streamlit
+st.session_state["mapbox_api_key"] = mapbox_token
+
 # Initialize Geocoder from Mapbox
 geocoder = Geocoder(access_token=mapbox_token)
 
@@ -48,8 +51,7 @@ try:
                 zoom=zoom_level,
                 pitch=45,  # Add pitch for a slight 3D effect
                 bearing=0
-            ),
-            mapbox_key=mapbox_token
+            )
         )
     )
 except Exception as e:
