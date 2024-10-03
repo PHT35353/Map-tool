@@ -119,7 +119,7 @@ mapbox_map_html = f"""
     let landmarks = [];
 
     // Store names of polygons and markers once during creation
-    let featureNames = {};
+    let featureNames = {{}};
 
     // Handle drawn features (lines, shapes)
     map.on('draw.create', updateMeasurements);
