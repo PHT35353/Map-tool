@@ -1,5 +1,2 @@
 streamlit
 requests
-mapbox-gl
-mapbox-gl-draw
-turf
