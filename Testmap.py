@@ -67,15 +67,6 @@ mapbox_map_html = f"""
         .mapboxgl-ctrl {{
             margin: 10px;
         }}
-        .custom-line {{
-            stroke: {line_color};
-        }}
-        .custom-polygon {{
-            fill: {polygon_color};
-        }}
-        .custom-marker {{
-            background-color: {marker_color};
-        }}
     </style>
 </head>
 <body>
@@ -110,7 +101,44 @@ mapbox_map_html = f"""
             point: true,
             trash: true
         }},
-        defaultMode: 'draw_polygon'
+        styles: [
+            {{
+                "id": "custom-polygon-fill",
+                "type": "fill",
+                "filter": ["all", ["==", "$type", "Polygon"]],
+                "paint": {{
+                    "fill-color": "{polygon_color}",
+                    "fill-opacity": 0.4
+                }}
+            }},
+            {{
+                "id": "custom-polygon-stroke",
+                "type": "line",
+                "filter": ["all", ["==", "$type", "Polygon"]],
+                "paint": {{
+                    "line-color": "{polygon_color}",
+                    "line-width": 2
+                }}
+            }},
+            {{
+                "id": "custom-line-string",
+                "type": "line",
+                "filter": ["all", ["==", "$type", "LineString"]],
+                "paint": {{
+                    "line-color": "{line_color}",
+                    "line-width": 3
+                }}
+            }},
+            {{
+                "id": "custom-point",
+                "type": "circle",
+                "filter": ["all", ["==", "$type", "Point"]],
+                "paint": {{
+                    "circle-radius": 5,
+                    "circle-color": "{marker_color}"
+                }}
+            }}
+        ]
     }});
     
     map.addControl(Draw);
