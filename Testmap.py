@@ -1,11 +1,12 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import folium
 from streamlit_folium import st_folium
 from geopy.distance import geodesic
 from folium import plugins
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Mapbox 3D Satellite View")
+st.title("Interactive Map Tool with Zoomable & Rotatable 3D Mapbox View")
 
 # Add instructions
 st.markdown("""
@@ -14,16 +15,16 @@ This tool allows you to:
 2. Place Circle Markers (with custom names and colors) within the selected area.
 3. Draw lines (pipes) between Circle Markers with customizable names and colors. Each line will display its length.
 4. Search for a location by entering latitude and longitude (in the sidebar).
+5. Zoom and rotate the 3D map for a more interactive experience.
 """)
-
-# Set the starting location and zoom to the Netherlands
-default_location = [52.3676, 4.9041]  # Amsterdam, Netherlands
-zoom_start = 13
 
 # Sidebar to manage the map interactions
 st.sidebar.title("Search by Coordinates")
 
-# Search for a location by Latitude and Longitude
+# Default location set to Amsterdam, Netherlands
+default_location = [52.3676, 4.9041]
+
+# Input fields for latitude and longitude
 latitude = st.sidebar.number_input("Latitude", value=default_location[0])
 longitude = st.sidebar.number_input("Longitude", value=default_location[1])
 
@@ -31,27 +32,65 @@ longitude = st.sidebar.number_input("Longitude", value=default_location[1])
 if st.sidebar.button("Search Location"):
     default_location = [latitude, longitude]
 
-# Create a Folium map with Mapbox Satellite + Terrain for 3D effect
-# Use your Mapbox API key and style URLs to enable satellite view and 3D terrain
-tile_url = f"https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{{z}}/{{x}}/{{y}}?access_token=pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
-m = folium.Map(location=default_location, zoom_start=zoom_start, tiles=None)  # No default tile layer
+# Mapbox GL JS Map
+mapbox_access_token = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
 
-# Add Mapbox's 3D satellite view as the base layer
-folium.TileLayer(
-    tiles=tile_url,
-    attr='Mapbox Satellite Streets',
-    name='Mapbox Satellite Streets',
-    control=False
-).add_to(m)
+# HTML template to load the Mapbox map with zoom, pitch (3D), and rotation capabilities
+mapbox_map_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Zoom and Rotate Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.css" rel="stylesheet" />
+    <style>
+        body {{
+            margin: 0;
+            padding: 0;
+        }}
+        #map {{
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }}
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+    mapboxgl.accessToken = '{mapbox_access_token}';
+    const map = new mapboxgl.Map({{
+        container: 'map',
+        style: 'mapbox://styles/mapbox/satellite-streets-v12',
+        center: [{longitude}, {latitude}],
+        zoom: 13,  // Adjust this value for default zoom level
+        pitch: 45, // Angle for the 3D effect
+        bearing: 0, // Rotation angle
+        antialias: true  // Improves the 3D look
+    }});
 
-# Add Mapbox 3D terrain support via Mapbox GL JS Terrain (by adding a custom layer)
-terrain_tile_url = f"https://api.mapbox.com/v4/mapbox.mapbox-terrain-v2,mapbox.mapbox-satellite-v9/tiles/{{z}}/{{x}}/{{y}}?access_token=pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
-folium.TileLayer(
-    tiles=terrain_tile_url,
-    attr='Mapbox 3D Terrain',
-    name='Mapbox 3D Terrain',
-    control=False
-).add_to(m)
+    // Enable map rotation and zoom controls
+    map.addControl(new mapboxgl.NavigationControl());
+
+    // Allow rotation and pitch adjustments using right click
+    map.dragRotate.enable();
+    map.touchZoomRotate.enableRotation();
+</script>
+</body>
+</html>
+"""
+
+# Display the map using Streamlit components (Mapbox GL JS)
+components.html(mapbox_map_html, height=600)
+
+# The interactive drawing tools (Folium part) will still remain, but shown separately
+st.markdown("## Drawing Tools (Folium)")
+
+# Folium map setup for drawing interactions (but not displayed in the same map)
+m = folium.Map(location=default_location, zoom_start=13)
 
 # Add drawing tool for selecting a region, placing circle markers, and drawing lines
 draw = plugins.Draw(
