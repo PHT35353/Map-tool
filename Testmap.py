@@ -46,6 +46,9 @@ st.markdown(
     }}
     </style>
     <div id="map"></div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
     <script>
     // Initialize the Leaflet map
     var map = L.map('map').setView([{lat}, {lon}], {zoom_level});
@@ -85,12 +88,9 @@ st.markdown(
 
         // Send coordinates back to Streamlit
         const coords = coordinates.map(latlng => [latlng.lat, latlng.lng]);
-        const data = {{ "coords": coords }};
         
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/add_line", true);
-        xhr.setRequestHeader("Content-Type", "application/json");
-        xhr.send(JSON.stringify(data));
+        // Store the coordinates in a hidden input field to be captured by Streamlit
+        window.streamlitApp.send_coords(coords);
     }});
     </script>
     """,
@@ -101,3 +101,12 @@ st.markdown(
 if st.session_state.lines:
     for line in st.session_state.lines:
         st.markdown(f"<script>map.addPolyline({json.dumps(line)}, {json.dumps(st.session_state.color)});</script>", unsafe_allow_html=True)
+
+# Function to receive coordinates
+def send_coords(coords):
+    if coords:
+        st.session_state.lines.append(coords)
+        st.success(f"Line added! Coordinates: {coords}")
+
+# Register the function
+st.experimental_singleton(send_coords)
