@@ -107,17 +107,10 @@ mapbox_map_html = f"""
     
     map.addControl(Draw);
 
-    let landmarkCount = 0;
-    let landmarks = [];
-
-    // Store names and colors of polygons, lines, and markers once during creation
-    let featureColors = {{}};
-    let featureNames = {{}};
-
     // Handle drawn features (lines, shapes)
     map.on('draw.create', updateMeasurements);
     map.on('draw.update', updateMeasurements);
-    map.on('draw.delete', deleteFeature);
+    map.on('draw.delete', updateMeasurements);
 
     function updateMeasurements(e) {{
         const data = Draw.getAll();
@@ -127,156 +120,18 @@ mapbox_map_html = f"""
             features.forEach(function(feature, index) {{
                 if (feature.geometry.type === 'LineString') {{
                     const length = turf.length(feature);
-                    const startCoord = feature.geometry.coordinates[0];
-                    const endCoord = feature.geometry.coordinates[feature.geometry.coordinates.length - 1];
-
-                    // Identify landmarks for the start and end points of the line
-                    let startLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, startCoord) < 0.01);
-                    let endLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, endCoord) < 0.01);
-
-                    // Only ask for name once
-                    if (!featureNames[feature.id]) {{
-                        const name = prompt("Enter a name for this line:");
-                        featureNames[feature.id] = name || "Line " + (index + 1);
-                    }}
-
-                    // Assign color if not already assigned
-                    if (!featureColors[feature.id]) {{
-                        const lineColor = prompt("Enter a color for this line (e.g., red, purple, cyan, pink):");
-                        featureColors[feature.id] = lineColor || 'blue';
-                    }}
-
-                    // Set the line's color
-                    map.addLayer({{
-                        id: 'line-' + feature.id,
-                        type: 'line',
-                        source: {{
-                            type: 'geojson',
-                            data: feature
-                        }},
-                        layout: {{}},
-                        paint: {{
-                            'line-color': featureColors[feature.id],
-                            'line-width': 4
-                        }}
-                    }});
-
-                    // Show the line and its association with landmarks
-                    const popup = new mapboxgl.Popup()
-                        .setLngLat(startCoord)
-                        .setHTML('<p>Line belongs to: ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + length.toFixed(2) + ' km</p>')
-                        .addTo(map);
-                    
-                    sidebarContent += '<p>Line ' + featureNames[feature.id] + ' belongs to ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + ': ' + length.toFixed(2) + ' km</p>';
-                }} else if (feature.geometry.type === 'Point') {{
-                    if (!feature.properties.name) {{
-                        if (!featureNames[feature.id]) {{
-                            const name = prompt("Enter a name for this landmark:");
-                            feature.properties.name = name || "Landmark " + (landmarkCount + 1);
-                            featureNames[feature.id] = feature.properties.name;
-                            landmarks.push(feature);
-                            landmarkCount++;
-                        }} else {{
-                            feature.properties.name = featureNames[feature.id];
-                        }}
-                    }}
-
-                    // Assign color if not already assigned
-                    if (!featureColors[feature.id]) {{
-                        const markerColor = prompt("Enter a color for this landmark (e.g., black, white):");
-                        featureColors[feature.id] = markerColor || 'black';
-                    }}
-
-                    // Set the marker's color
-                    map.addLayer({{
-                        id: 'marker-' + feature.id,
-                        type: 'circle',
-                        source: {{
-                            type: 'geojson',
-                            data: feature
-                        }},
-                        paint: {{
-                            'circle-radius': 8,
-                            'circle-color': featureColors[feature.id]
-                        }}
-                    }});
-
-                    sidebarContent += '<p>Landmark ' + feature.properties.name + '</p>';
+                    sidebarContent += `Line {index + 1}: Length = {length.toFixed(2)} km<br>`;
                 }} else if (feature.geometry.type === 'Polygon') {{
-                    if (!feature.properties.name) {{
-                        if (!featureNames[feature.id]) {{
-                            const name = prompt("Enter a name for this polygon:");
-                            feature.properties.name = name || "Polygon " + (index + 1);
-                            featureNames[feature.id] = feature.properties.name;
-                        }} else {{
-                            feature.properties.name = featureNames[feature.id];
-                        }}
-                    }}
-
-                    // Assign color if not already assigned
-                    if (!featureColors[feature.id]) {{
-                        const polygonColor = prompt("Enter a color for this polygon (e.g., green, yellow):");
-                        featureColors[feature.id] = polygonColor || 'yellow';
-                    }}
-
-                    // Set the polygon's color
-                    map.addLayer({{
-                        id: 'polygon-' + feature.id,
-                        type: 'fill',
-                        source: {{
-                            type: 'geojson',
-                            data: feature
-                        }},
-                        paint: {{
-                            'fill-color': featureColors[feature.id],
-                            'fill-opacity': 0.6
-                        }}
-                    }});
-
                     const bbox = turf.bbox(feature);
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
                     const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
-                    
-                    const popup = new mapboxgl.Popup()
-                        .setLngLat(feature.geometry.coordinates[0][0])
-                        .setHTML('<p>Polygon: ' + feature.properties.name + '<br>Width: ' + width.toFixed(2) + ' km, Height: ' + height.toFixed(2) + ' km</p>')
-                        .addTo(map);
-                    
-                    sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
+                    sidebarContent += `Polygon {index + 1}: Width = {width.toFixed(2)} km, Height = {height.toFixed(2)} km<br>`;
                 }}
-
-                // Update the color and position of the layer on updates
-                if (map.getLayer('line-' + feature.id)) {{
-                    map.getSource('line-' + feature.id).setData(feature);
-                }}
-                if (map.getLayer('polygon-' + feature.id)) {{
-                    map.getSource('polygon-' + feature.id).setData(feature);
-                }}
-                if (map.getLayer('marker-' + feature.id)) {{
-                    map.getSource('marker-' + feature.id).setData(feature);
-                }}
-
             }});
         }} else {{
-            sidebarContent = "<p>No features drawn yet.</p>";
+            sidebarContent = "No features drawn yet.";
         }}
         window.parent.postMessage(sidebarContent, "*");
-    }}
-
-    // Function to handle deletion of features
-    function deleteFeature(e) {{
-        const features = e.features;
-        features.forEach(function(feature) {{
-            // Remove feature colors and names on deletion
-            delete featureColors[feature.id];
-            delete featureNames[feature.id];
-
-            // Remove the layer corresponding to the deleted feature
-            map.removeLayer('line-' + feature.id);
-            map.removeLayer('polygon-' + feature.id);
-            map.removeLayer('marker-' + feature.id);
-        }});
-        updateMeasurements();
     }}
 </script>
 </body>
@@ -286,49 +141,22 @@ mapbox_map_html = f"""
 # Render the Mapbox 3D Satellite map with drawing functionality and custom features
 components.html(mapbox_map_html, height=600)
 
-# Address search using Mapbox Geocoding API
-if address_search:
-    geocode_url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{address_search}.json?access_token={mapbox_access_token}"
-    # Request the geocoded location
-    try:
-        response = requests.get(geocode_url)
-        if response.status_code == 200:
-            geo_data = response.json()
-            if len(geo_data['features']) > 0:
-                coordinates = geo_data['features'][0]['center']
-                latitude, longitude = coordinates[1], coordinates[0]
-                st.sidebar.success(f"Address found: {geo_data['features'][0]['place_name']}")
-                st.sidebar.write(f"Coordinates: Latitude {latitude}, Longitude {longitude}")
-            else:
-                st.sidebar.error("Address not found.")
-        else:
-            st.sidebar.error("Error connecting to the Mapbox API.")
-    except Exception as e:
-        st.sidebar.error(f"Error: {e}")
-
-# Placeholder for receiving and displaying measurements from the map
-measurement = st.empty()
+# Placeholder to store measurement data
+if 'measurement_data' not in st.session_state:
+    st.session_state['measurement_data'] = ""
 
 # JavaScript listener to capture the messages from the map and send to Streamlit
 components.html(f"""
     <script>
     window.addEventListener('message', function(event) {{
         const messageData = event.data;
-
-        // Send the message to Streamlit only if it's a valid update
-        if (messageData && typeof messageData === 'string') {{
-            const iframeMessage = JSON.stringify({{ 'type': 'update', 'content': messageData }});
-            window.parent.postMessage(iframeMessage, "*");
+        if (typeof messageData === 'string') {{
+            window.parent.postMessage(messageData, "*");
         }}
     }});
     </script>
 """, height=0)
 
-# Display the received message from the map in the sidebar
-if 'measurement_data' not in st.session_state:
-    st.session_state['measurement_data'] = ""
-
-# Update measurement data
+# Update the Streamlit sidebar with the measurements received
 if st.session_state['measurement_data']:
     measurement_display.markdown(st.session_state['measurement_data'])
-
