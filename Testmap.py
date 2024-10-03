@@ -73,12 +73,19 @@ point_layers = [
     )
 ]
 
+# Debugging: Print layers to check format
+st.write("Lines Data:", st.session_state.lines)
+st.write("Points Data:", st.session_state.points)
+
 # Create the deck
-r = pdk.Deck(
-    layers=line_layers + point_layers,
-    initial_view_state=initial_view_state,
-    mapbox_key=MAPBOX_ACCESS_TOKEN,
-)
+try:
+    r = pdk.Deck(
+        layers=line_layers + point_layers,
+        initial_view_state=initial_view_state,
+        mapbox_key=MAPBOX_ACCESS_TOKEN,
+    )
+except Exception as e:
+    st.error(f"Error creating the deck: {e}")
 
 # Display the map
 st.pydeck_chart(r)
