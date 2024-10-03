@@ -113,7 +113,7 @@ mapbox_map_html = f"""
     // Handle drawn features (lines, shapes)
     map.on('draw.create', updateMeasurements);
     map.on('draw.update', updateMeasurements);
-    map.on('draw.delete', updateMeasurements);
+    map.on('draw.delete', deleteFeature);
 
     function updateMeasurements(e) {{
         const data = Draw.getAll();
@@ -245,6 +245,22 @@ mapbox_map_html = f"""
             sidebarContent = "<p>No features drawn yet.</p>";
         }}
         window.parent.postMessage(sidebarContent, "*");
+    }}
+
+    // Function to handle deletion of features
+    function deleteFeature(e) {{
+        const features = e.features;
+        features.forEach(function(feature) {{
+            // Remove feature colors and names on deletion
+            delete featureColors[feature.id];
+            delete featureNames[feature.id];
+
+            // Remove the layer corresponding to the deleted feature
+            map.removeLayer('line-' + feature.id);
+            map.removeLayer('polygon-' + feature.id);
+            map.removeLayer('marker-' + feature.id);
+        }});
+        updateMeasurements();
     }}
 </script>
 </body>
