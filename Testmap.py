@@ -142,11 +142,20 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = lineColor || 'blue';
                     }}
 
-                    map.setPaintProperty(
-                        "custom-line-" + feature.id,
-                        'line-color',
-                        featureColors[feature.id]
-                    );
+                    // Set the line's color
+                    map.addLayer({{
+                        id: 'line-' + feature.id,
+                        type: 'line',
+                        source: {{
+                            type: 'geojson',
+                            data: feature
+                        }},
+                        layout: {{}},
+                        paint: {{
+                            'line-color': featureColors[feature.id],
+                            'line-width': 4
+                        }}
+                    }});
 
                     // Show the line and its association with landmarks
                     const popup = new mapboxgl.Popup()
@@ -174,11 +183,19 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = markerColor || 'black';
                     }}
 
-                    map.setPaintProperty(
-                        "custom-marker-" + feature.id,
-                        'circle-color',
-                        featureColors[feature.id]
-                    );
+                    // Set the marker's color
+                    map.addLayer({{
+                        id: 'marker-' + feature.id,
+                        type: 'circle',
+                        source: {{
+                            type: 'geojson',
+                            data: feature
+                        }},
+                        paint: {{
+                            'circle-radius': 8,
+                            'circle-color': featureColors[feature.id]
+                        }}
+                    }});
 
                     sidebarContent += '<p>Landmark ' + feature.properties.name + '</p>';
                 }} else if (feature.geometry.type === 'Polygon') {{
@@ -198,11 +215,19 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = polygonColor || 'yellow';
                     }}
 
-                    map.setPaintProperty(
-                        "custom-polygon-" + feature.id,
-                        'fill-color',
-                        featureColors[feature.id]
-                    );
+                    // Set the polygon's color
+                    map.addLayer({{
+                        id: 'polygon-' + feature.id,
+                        type: 'fill',
+                        source: {{
+                            type: 'geojson',
+                            data: feature
+                        }},
+                        paint: {{
+                            'fill-color': featureColors[feature.id],
+                            'fill-opacity': 0.6
+                        }}
+                    }});
 
                     const bbox = turf.bbox(feature);
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
