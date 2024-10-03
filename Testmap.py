@@ -1,6 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import json
+import requests
 
 # Set up a title for the app
 st.title("Interactive Map Tool with 3D Zoomable & Rotatable Mapbox Satellite View")
@@ -147,8 +148,10 @@ mapbox_map_html = f"""
 
     // Send GeoJSON data to Streamlit when requested
     window.addEventListener('message', function(event) {{
+        console.log('Message received:', event.data);  // Debugging message
         if (event.data === 'save_geojson') {{
             const geojson = Draw.getAll();
+            console.log('GeoJSON data being sent:', geojson);  // Debugging message
             window.parent.postMessage(JSON.stringify(geojson), "*");
         }}
     }});
@@ -156,6 +159,7 @@ mapbox_map_html = f"""
     // Load GeoJSON data if uploaded
     {f"""
     const savedGeoJSON = {json.dumps(json.load(saved_geojson))};
+    console.log('Loaded GeoJSON data:', savedGeoJSON);  // Debugging message
     Draw.set(savedGeoJSON);
     """ if saved_geojson else ""}
 </script>
@@ -177,6 +181,7 @@ if "save_geojson" in st.session_state:
         height=0
     )
 
+# Callback to handle the received GeoJSON data
 def js_callback(data):
     geojson = json.loads(data)
     st.download_button(label="Download GeoJSON", data=json.dumps(geojson), file_name="drawings.geojson", mime="application/json")
