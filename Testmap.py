@@ -3,14 +3,14 @@ import streamlit.components.v1 as components
 import requests
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Predefined Colors for Features")
+st.title("Interactive Map Tool with Individual Colors and Names for Features")
 
 # Add instructions and explain color options
 st.markdown("""
 This tool allows you to:
 1. Draw rectangles (polygons), lines, and markers (landmarks) on the map.
-2. Choose specific colors for lines, polygons, and markers from the dropdown options before drawing them.
-3. Show the width and height of drawn polygons and the length of drawn lines.
+2. Assign names and choose specific colors for each feature individually upon creation.
+3. Display distances for lines and dimensions for polygons both on the map and in the sidebar.
 4. Search for a location by entering latitude and longitude or an address.
 
 **Available Colors**:
@@ -34,15 +34,6 @@ address_search = st.sidebar.text_input("Search for address (requires internet co
 # Button to search for a location
 if st.sidebar.button("Search Location"):
     default_location = [latitude, longitude]
-
-# Predefined color options for lines, polygons, and markers
-color_options = ['red', 'blue', 'green', 'yellow', 'purple', 'cyan', 'pink', 'orange', 'black', 'white', 'gray', 
-                 '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#800080', '#00FFFF', '#FFC0CB', '#FFA500', '#000000', '#FFFFFF', '#808080']
-
-# Sidebar color selection for lines, polygons, and markers
-line_color = st.sidebar.selectbox("Select Line Color", color_options)
-polygon_color = st.sidebar.selectbox("Select Polygon Color", color_options)
-marker_color = st.sidebar.selectbox("Select Marker Color", color_options)
 
 # Mapbox GL JS API token
 mapbox_access_token = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
@@ -108,47 +99,16 @@ mapbox_map_html = f"""
             point: true,
             trash: true
         }},
-        styles: [
-            {{
-                "id": "custom-polygon-fill",
-                "type": "fill",
-                "filter": ["all", ["==", "$type", "Polygon"]],
-                "paint": {{
-                    "fill-color": "{polygon_color}",
-                    "fill-opacity": 0.4
-                }}
-            }},
-            {{
-                "id": "custom-polygon-stroke",
-                "type": "line",
-                "filter": ["all", ["==", "$type", "Polygon"]],
-                "paint": {{
-                    "line-color": "{polygon_color}",
-                    "line-width": 2
-                }}
-            }},
-            {{
-                "id": "custom-line-string",
-                "type": "line",
-                "filter": ["all", ["==", "$type", "LineString"]],
-                "paint": {{
-                    "line-color": "{line_color}",
-                    "line-width": 3
-                }}
-            }},
-            {{
-                "id": "custom-point",
-                "type": "circle",
-                "filter": ["all", ["==", "$type", "Point"]],
-                "paint": {{
-                    "circle-radius": 5,
-                    "circle-color": "{marker_color}"
-                }}
-            }}
-        ]
     }});
     
     map.addControl(Draw);
+
+    let landmarkCount = 0;
+    let landmarks = [];
+
+    // Store names and colors of polygons, lines, and markers once during creation
+    let featureColors = {{}};
+    let featureNames = {{}};
 
     // Handle drawn features (lines, shapes)
     map.on('draw.create', updateMeasurements);
@@ -165,26 +125,90 @@ mapbox_map_html = f"""
                     const length = turf.length(feature);
                     const startCoord = feature.geometry.coordinates[0];
                     const endCoord = feature.geometry.coordinates[feature.geometry.coordinates.length - 1];
+
+                    // Only ask for name once
+                    if (!featureNames[feature.id]) {{
+                        const name = prompt("Enter a name for this line:");
+                        featureNames[feature.id] = name || "Line " + (index + 1);
+                    }}
+
+                    // Assign color if not already assigned
+                    if (!featureColors[feature.id]) {{
+                        const lineColor = prompt("Enter a color for this line (e.g., red, purple, cyan, pink):");
+                        featureColors[feature.id] = lineColor || 'blue';
+                    }}
+
+                    map.setPaintProperty(
+                        "custom-line-" + feature.id,
+                        'line-color',
+                        featureColors[feature.id]
+                    );
                     
                     const popup = new mapboxgl.Popup()
                         .setLngLat(startCoord)
-                        .setHTML('<p>Line length: ' + length.toFixed(2) + ' km</p>')
+                        .setHTML('<p>Line: ' + featureNames[feature.id] + '<br>Length: ' + length.toFixed(2) + ' km</p>')
                         .addTo(map);
                     
-                    sidebarContent += '<p>Line ' + (index + 1) + ': Length = ' + length.toFixed(2) + ' km</p>';
+                    sidebarContent += '<p>Line ' + featureNames[feature.id] + ': Length = ' + length.toFixed(2) + ' km</p>';
                 }} else if (feature.geometry.type === 'Point') {{
-                    sidebarContent += '<p>Marker ' + (index + 1) + ': Added</p>';
+                    if (!feature.properties.name) {{
+                        if (!featureNames[feature.id]) {{
+                            const name = prompt("Enter a name for this landmark:");
+                            feature.properties.name = name || "Landmark " + (landmarkCount + 1);
+                            featureNames[feature.id] = feature.properties.name;
+                            landmarks.push(feature);
+                            landmarkCount++;
+                        }} else {{
+                            feature.properties.name = featureNames[feature.id];
+                        }}
+                    }}
+
+                    // Assign color if not already assigned
+                    if (!featureColors[feature.id]) {{
+                        const markerColor = prompt("Enter a color for this landmark (e.g., black, white):");
+                        featureColors[feature.id] = markerColor || 'black';
+                    }}
+
+                    map.setPaintProperty(
+                        "custom-marker-" + feature.id,
+                        'circle-color',
+                        featureColors[feature.id]
+                    );
+
+                    sidebarContent += '<p>Landmark ' + feature.properties.name + '</p>';
                 }} else if (feature.geometry.type === 'Polygon') {{
+                    if (!feature.properties.name) {{
+                        if (!featureNames[feature.id]) {{
+                            const name = prompt("Enter a name for this polygon:");
+                            feature.properties.name = name || "Polygon " + (index + 1);
+                            featureNames[feature.id] = feature.properties.name;
+                        }} else {{
+                            feature.properties.name = featureNames[feature.id];
+                        }}
+                    }}
+
+                    // Assign color if not already assigned
+                    if (!featureColors[feature.id]) {{
+                        const polygonColor = prompt("Enter a color for this polygon (e.g., green, yellow):");
+                        featureColors[feature.id] = polygonColor || 'yellow';
+                    }}
+
+                    map.setPaintProperty(
+                        "custom-polygon-" + feature.id,
+                        'fill-color',
+                        featureColors[feature.id]
+                    );
+
                     const bbox = turf.bbox(feature);
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
                     const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
                     
                     const popup = new mapboxgl.Popup()
                         .setLngLat(feature.geometry.coordinates[0][0])
-                        .setHTML('<p>Polygon - Width: ' + width.toFixed(2) + ' km, Height: ' + height.toFixed(2) + ' km</p>')
+                        .setHTML('<p>Polygon: ' + feature.properties.name + '<br>Width: ' + width.toFixed(2) + ' km, Height: ' + height.toFixed(2) + ' km</p>')
                         .addTo(map);
                     
-                    sidebarContent += '<p>Polygon ' + (index + 1) + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
+                    sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
                 }}
             }});
         }} else {{
