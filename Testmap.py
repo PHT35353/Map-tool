@@ -1,6 +1,7 @@
 import streamlit as st
 import pydeck as pdk
 import numpy as np
+import json
 
 # Set your Mapbox access token
 MAPBOX_ACCESS_TOKEN = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
@@ -18,7 +19,6 @@ if 'color' not in st.session_state:
 
 # Function to calculate distance in meters
 def calculate_distance(point1, point2):
-    # Haversine formula to calculate distance between two points
     lat1, lon1 = np.radians(point1)
     lat2, lon2 = np.radians(point2)
     dlon = lon2 - lon1
@@ -28,7 +28,7 @@ def calculate_distance(point1, point2):
     r = 6371000  # Radius of Earth in meters
     return c * r
 
-# Function to handle line drawing
+# Function to handle line drawing by clicking on the map
 def add_line(start, end):
     st.session_state.lines.append((start, end))
 
@@ -38,6 +38,46 @@ def clear_lines():
 
 # Streamlit layout
 st.title("Industrial Piping Tool")
+
+# Sidebar for controls
+with st.sidebar:
+    st.header("Controls")
+    
+    # Input for adding points
+    start_point = st.text_input("Start Point (latitude,longitude)", "37.7749,-122.4194")
+    end_point = st.text_input("End Point (latitude,longitude)", "37.7750,-122.4183")
+    
+    if st.button("Add Line"):
+        try:
+            start_coords = [float(coord) for coord in start_point.split(",")]
+            end_coords = [float(coord) for coord in end_point.split(",")]
+            add_line(start_coords, end_coords)
+            distance = calculate_distance(start_coords, end_coords)
+            st.success(f"Line added! Distance: {distance:.2f} meters")
+        except ValueError:
+            st.error("Please enter valid latitude and longitude values.")
+    
+    # Input for adding landmarks
+    landmark_input = st.text_input("Add Landmark (latitude,longitude)", "37.7750,-122.4190")
+    if st.button("Add Landmark"):
+        try:
+            landmark_coords = [float(coord) for coord in landmark_input.split(",")]
+            st.session_state.points.append({"longitude": landmark_coords[1], "latitude": landmark_coords[0]})
+            st.success("Landmark added!")
+        except ValueError:
+            st.error("Please enter valid latitude and longitude values.")
+
+    # Option to clear lines
+    if st.button("Clear Lines"):
+        clear_lines()
+        st.success("All lines cleared.")
+
+    # Color customization
+    st.subheader("Customize Line Color")
+    red = st.slider("Red", 0, 255, 255)
+    green = st.slider("Green", 0, 255, 0)
+    blue = st.slider("Blue", 0, 255, 0)
+    st.session_state.color = [red, green, blue]
 
 # Map configuration
 initial_view_state = pdk.ViewState(
@@ -90,38 +130,19 @@ except Exception as e:
 # Display the map
 st.pydeck_chart(r)
 
-# Input for adding points and lines
-st.subheader("Draw Lines Between Points")
-start_point = st.text_input("Start Point (latitude,longitude)", "37.7749,-122.4194")
-end_point = st.text_input("End Point (latitude,longitude)", "37.7750,-122.4183")
-if st.button("Add Line"):
-    try:
-        start_coords = [float(coord) for coord in start_point.split(",")]
-        end_coords = [float(coord) for coord in end_point.split(",")]
-        add_line(start_coords, end_coords)
-        distance = calculate_distance(start_coords, end_coords)
-        st.success(f"Line added! Distance: {distance:.2f} meters")
-    except ValueError:
-        st.error("Please enter valid latitude and longitude values.")
-
-# Input for adding landmarks
-landmark_input = st.text_input("Add Landmark (latitude,longitude)", "37.7750,-122.4190")
-if st.button("Add Landmark"):
-    try:
-        landmark_coords = [float(coord) for coord in landmark_input.split(",")]
-        st.session_state.points.append({"longitude": landmark_coords[1], "latitude": landmark_coords[0]})
-        st.success("Landmark added!")
-    except ValueError:
-        st.error("Please enter valid latitude and longitude values.")
-
-# Option to clear lines
-if st.button("Clear Lines"):
-    clear_lines()
-    st.success("All lines cleared.")
-
-# Color customization
-st.subheader("Customize Line Color")
-red = st.slider("Red", 0, 255, 255)
-green = st.slider("Green", 0, 255, 0)
-blue = st.slider("Blue", 0, 255, 0)
-st.session_state.color = [red, green, blue]
+# JavaScript function to handle click events for drawing lines
+st.markdown(
+    """
+    <script>
+    const deck = document.querySelector('deck-gl');
+    deck.addEventListener('click', function (e) {
+        const coords = e.lngLat;
+        // Assuming lines are added on click
+        if (window.streamlitApp) {
+            window.streamlitApp.addLine([coords.lat, coords.lng]);
+        }
+    });
+    </script>
+    """,
+    unsafe_allow_html=True
+)
