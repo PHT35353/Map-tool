@@ -3,14 +3,14 @@ import streamlit.components.v1 as components
 import requests
 
 # Set up a title for the app
-st.title("Interactive Map Tool with 3D Zoomable & Rotatable Mapbox Satellite View")
+st.title("Interactive Map Tool with Customizable Colors & Names")
 
 # Add instructions
 st.markdown("""
 This tool allows you to:
-1. Select an area of the map by drawing a rectangle and customize its name.
-2. Place Circle Markers (landmarks) with custom names.
-3. Draw lines (pipes) between Circle Markers, and the lines will be associated with these landmarks.
+1. Select an area of the map by drawing a rectangle and customize its name and color.
+2. Place Circle Markers (landmarks) with custom names and colors.
+3. Draw lines (pipes) between Circle Markers, customize their colors and names, and the lines will be associated with these landmarks.
 4. Show the width and length of drawn rectangles and the length of drawn lines on the map and sidebar.
 5. Search for a location using latitude and longitude, or by entering an address.
 """)
@@ -32,8 +32,10 @@ address_search = st.sidebar.text_input("Search for address (requires internet co
 if st.sidebar.button("Search Location"):
     default_location = [latitude, longitude]
 
-# Fullscreen control added
-fullscreen_control = True
+# Custom color pickers for tools
+line_color = st.sidebar.color_picker("Pick Line Color", "#FF0000")
+polygon_color = st.sidebar.color_picker("Pick Polygon Color", "#0000FF")
+marker_color = st.sidebar.color_picker("Pick Marker Color", "#00FF00")
 
 # Mapbox GL JS API token
 mapbox_access_token = "pk.eyJ1IjoicGFyc2ExMzgzIiwiYSI6ImNtMWRqZmZreDB6MHMyaXNianJpYWNhcGQifQ.hot5D26TtggHFx9IFM-9Vw"
@@ -64,6 +66,15 @@ mapbox_map_html = f"""
         }}
         .mapboxgl-ctrl {{
             margin: 10px;
+        }}
+        .custom-line {{
+            stroke: {line_color};
+        }}
+        .custom-polygon {{
+            fill: {polygon_color};
+        }}
+        .custom-marker {{
+            background-color: {marker_color};
         }}
     </style>
 </head>
@@ -133,7 +144,8 @@ mapbox_map_html = f"""
                     
                     sidebarContent += '<p>Line ' + (index + 1) + ': ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + length.toFixed(2) + ' km</p>';
                 }} else if (feature.geometry.type === 'Point' && !feature.properties.name) {{
-                    feature.properties.name = "Landmark " + (landmarkCount + 1);
+                    const name = prompt("Enter a name for this landmark:");
+                    feature.properties.name = name || "Landmark " + (landmarkCount + 1);
                     landmarks.push(feature);
                     sidebarContent += '<p>Landmark ' + (landmarkCount + 1) + ': ' + feature.properties.name + '</p>';
                     landmarkCount++;
@@ -142,12 +154,15 @@ mapbox_map_html = f"""
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
                     const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
                     
+                    const name = prompt("Enter a name for this polygon:");
+                    feature.properties.name = name || "Rectangle " + (index + 1);
+                    
                     const popup = new mapboxgl.Popup()
                         .setLngLat(feature.geometry.coordinates[0][0])
-                        .setHTML('<p>Rectangle ' + (index + 1) + ' - Width: ' + width.toFixed(2) + ' km, Height: ' + height.toFixed(2) + ' km</p>')
+                        .setHTML('<p>' + feature.properties.name + ' - Width: ' + width.toFixed(2) + ' km, Height: ' + height.toFixed(2) + ' km</p>')
                         .addTo(map);
                     
-                    sidebarContent += '<p>Rectangle ' + (index + 1) + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
+                    sidebarContent += '<p>' + feature.properties.name + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
                 }}
             }});
         }} else {{
