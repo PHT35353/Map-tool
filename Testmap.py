@@ -133,7 +133,7 @@ mapbox_map_html = f"""
                     }}
 
                     map.setPaintProperty(
-                        `custom-line-${feature.id}`,
+                        "custom-line-" + feature.id,
                         'line-color',
                         featureColors[feature.id]
                     );
@@ -164,7 +164,7 @@ mapbox_map_html = f"""
                     }}
 
                     map.setPaintProperty(
-                        `custom-marker-${feature.id}`,
+                        "custom-marker-" + feature.id,
                         'circle-color',
                         featureColors[feature.id]
                     );
@@ -188,7 +188,7 @@ mapbox_map_html = f"""
                     }}
 
                     map.setPaintProperty(
-                        `custom-polygon-${feature.id}`,
+                        "custom-polygon-" + feature.id,
                         'fill-color',
                         featureColors[feature.id]
                     );
@@ -226,7 +226,7 @@ if address_search:
         response = requests.get(geocode_url)
         if response.status_code == 200:
             geo_data = response.json()
-            if len(geo_data['features']) > 0:
+            if len(geo_data['features']) > 0):
                 coordinates = geo_data['features'][0]['center']
                 latitude, longitude = coordinates[1], coordinates[0]
                 st.sidebar.success(f"Address found: {geo_data['features'][0]['place_name']}")
