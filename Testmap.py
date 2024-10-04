@@ -280,7 +280,7 @@ mapbox_map_html = f"""
 
                     sidebarContent += '<p>Landmark ' + feature.properties.name + '</p>';
                 }}
-            });
+            }});
         }} else {{
             sidebarContent = "<p>No features drawn yet.</p>";
         }}
