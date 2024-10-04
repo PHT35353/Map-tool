@@ -84,7 +84,7 @@ mapbox_map_html = f"""
         }}
         #toggleSidebar {{
             position: absolute;
-            bottom: 500px;
+            bottom: 200px;
             right: 10px;
             z-index: 2;
             background-color: #4CAF50;
