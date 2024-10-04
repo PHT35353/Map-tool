@@ -87,9 +87,9 @@ mapbox_map_html = f"""
             bottom: 290px;
             right: 10px;
             z-index: 2;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
+            background-color: white;
+            color:black;
+            border: 1px solid #ccc;
             padding: 10px 15px;
             cursor: pointer;
             margin-bottom: 10px;
@@ -291,8 +291,10 @@ mapbox_map_html = f"""
         var sidebar = document.getElementById('sidebar');
         if (sidebar.classList.contains('collapsed')) {{
             sidebar.classList.remove('collapsed');
+            document.getElementById('toggleSidebar').innerText = "Close Sidebar";
         }} else {{
             sidebar.classList.add('collapsed');
+            document.getElementById('toggleSidebar').innerText = "Open Sidebar";
         }}
     }}
 
