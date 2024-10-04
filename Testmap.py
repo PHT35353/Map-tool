@@ -194,7 +194,7 @@ mapbox_map_html = f"""
                         }}
                     }});
 
-                    sidebarContent += `<p>Line {featureNames[feature.id]}: {length.toFixed(2)} {unit}</p>`;
+                    sidebarContent += `<p>Line ${featureNames[feature.id]}: ${length.toFixed(2)} ${unit}</p>`;
                 }} else if (feature.geometry.type === 'Polygon') {{
                     const bbox = turf.bbox(feature);
                     let width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]) * 1000; // Convert to meters
@@ -236,7 +236,7 @@ mapbox_map_html = f"""
                         }}
                     }});
 
-                    sidebarContent += `<p>Polygon {featureNames[feature.id]}: Width = {width.toFixed(2)} {widthUnit}, Height = {height.toFixed(2)} {heightUnit}</p>`;
+                    sidebarContent += `<p>Polygon ${featureNames[feature.id]}: Width = ${width.toFixed(2)} ${widthUnit}, Height = ${height.toFixed(2)} ${heightUnit}</p>`;
                 }}
             }});
         }} else {{
