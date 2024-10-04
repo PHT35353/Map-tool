@@ -176,7 +176,7 @@ mapbox_map_html = f"""
                     sidebarContent += '<p>Polygon ' + (index + 1) + ': Width = ' + widthValue + ' ' + widthUnit + ', Height = ' + heightValue + ' ' + heightUnit + '</p>';
                 }}
             }});
-        }} else {
+        }} else {{
             sidebarContent = "<p>No features drawn yet.</p>";
             }}
         document.getElementById('measurements').innerHTML = sidebarContent;
