@@ -116,126 +116,159 @@ mapbox_map_html = f"""
     map.on('draw.delete', deleteFeature);
 
     function updateMeasurements(e) {{
-    const data = Draw.getAll();
-    let sidebarContent = "";
-    if (data.features.length > 0) {{
-        const features = data.features;
-        features.forEach(function (feature, index) {{
-            if (feature.geometry.type === 'LineString') {{
-                const length = turf.length(feature);  // In kilometers by default
-                const startCoord = feature.geometry.coordinates[0];
-                const endCoord = feature.geometry.coordinates[feature.geometry.coordinates.length - 1];
+        const data = Draw.getAll();
+        let sidebarContent = "";
+        if (data.features.length > 0) {{
+            const features = data.features;
+            features.forEach(function(feature, index) {{
+                if (feature.geometry.type === 'LineString') {{
+                    const length = turf.length(feature);
+                    const startCoord = feature.geometry.coordinates[0];
+                    const endCoord = feature.geometry.coordinates[feature.geometry.coordinates.length - 1];
 
-                // Identify landmarks for the start and end points of the line
-                let startLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, startCoord) < 0.01);
-                let endLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, endCoord) < 0.01);
+                    // Identify landmarks for the start and end points of the line
+                    let startLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, startCoord) < 0.01);
+                    let endLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, endCoord) < 0.01);
+                    
+                    // Determine the unit based on length
+                    let distanceUnit = length >= 1 ? 'km' : 'm';
+                    let distanceValue = length >= 1 ? length.toFixed(2) : (length * 1000).toFixed(2);
 
-                // Only ask for name once (existing logic)
-                if (!featureNames[feature.id]) {{
-                    const name = prompt("Enter a name for this line:");
-                    featureNames[feature.id] = name || "Line " + (index + 1);
-                }}
-
-                // Assign color if not already assigned (existing logic)
-                if (!featureColors[feature.id]) {{
-                    const lineColor = prompt("Enter a color for this line (e.g., red, purple, cyan, pink):");
-                    featureColors[feature.id] = lineColor || 'blue';
-                }}
-
-                // Set the line's color (existing logic)
-                map.addLayer({{
-                    id: 'line-' + feature.id,
-                    type: 'line',
-                    source: {{
-                        type: 'geojson',
-                        data: feature
-                    }},
-                    layout: {{}},
-                    paint: {{
-                        'line-color': featureColors[feature.id],
-                        'line-width': 4
-                    }}
-                }});
-
-                // New: Adjust unit based on length
-                let distanceUnit = length >= 1 ? 'km' : 'm';
-                let distanceValue = length >= 1 ? length.toFixed(2) : (length * 1000).toFixed(2);
-
-                // Display the line's measurement and landmark association
-                const popup = new mapboxgl.Popup()
-                    .setLngLat(startCoord)
-                    .setHTML('<p>Line belongs to: ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + distanceValue + ' ' + distanceUnit + '</p>')
-                    .addTo(map);
-
-                sidebarContent += '<p>Line ' + featureNames[feature.id] + ' belongs to ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + ': ' + distanceValue + ' ' + distanceUnit + '</p>';
-            
-            }} else if (feature.geometry.type === 'Polygon') {{
-                if (!feature.properties.name) {{
+                    // Only ask for name once
                     if (!featureNames[feature.id]) {{
-                        const name = prompt("Enter a name for this polygon:");
-                        feature.properties.name = name || "Polygon " + (index + 1);
-                        featureNames[feature.id] = feature.properties.name;
-                    }} else {{
-                        feature.properties.name = featureNames[feature.id];
+                        const name = prompt("Enter a name for this line:");
+                        featureNames[feature.id] = name || "Line " + (index + 1);
                     }}
+
+                    // Assign color if not already assigned
+                    if (!featureColors[feature.id]) {{
+                        const lineColor = prompt("Enter a color for this line (e.g., red, purple, cyan, pink):");
+                        featureColors[feature.id] = lineColor || 'blue';
+                    }}
+
+                    // Set the line's color
+                    map.addLayer({{
+                        id: 'line-' + feature.id,
+                        type: 'line',
+                        source: {{
+                            type: 'geojson',
+                            data: feature
+                        }},
+                        layout: {{}},
+                        paint: {{
+                            'line-color': featureColors[feature.id],
+                            'line-width': 4
+                        }}
+                    }});
+
+                    // Show the line and its association with landmarks
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat(startCoord)
+                        .setHTML('<p>Line belongs to: ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + length.toFixed(2) + ' km</p>')
+                        .addTo(map);
+
+                    sidebarContent += '<p>Line ' + featureNames[feature.id] + ' belongs to ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + ': ' + length.toFixed(2) + ' km</p>';
+                }} else if (feature.geometry.type === 'Point') {{
+                    if (!feature.properties.name) {{
+                        if (!featureNames[feature.id]) {{
+                            const name = prompt("Enter a name for this landmark:");
+                            feature.properties.name = name || "Landmark " + (landmarkCount + 1);
+                            featureNames[feature.id] = feature.properties.name;
+                            landmarks.push(feature);
+                            landmarkCount++;
+                        }} else {{
+                            feature.properties.name = featureNames[feature.id];
+                        }}
+                    }}
+
+                    // Assign color if not already assigned
+                    if (!featureColors[feature.id]) {{
+                        const markerColor = prompt("Enter a color for this landmark (e.g., black, white):");
+                        featureColors[feature.id] = markerColor || 'black';
+                    }}
+
+                    // Set the marker's color
+                    map.addLayer({{
+                        id: 'marker-' + feature.id,
+                        type: 'circle',
+                        source: {{
+                            type: 'geojson',
+                            data: feature
+                        }},
+                        paint: {{
+                            'circle-radius': 8,
+                            'circle-color': featureColors[feature.id]
+                        }}
+                    }});
+
+                    sidebarContent += '<p>Landmark ' + feature.properties.name + '</p>';
+                }} else if (feature.geometry.type === 'Polygon') {{
+                    if (!feature.properties.name) {{
+                        if (!featureNames[feature.id]) {{
+                            const name = prompt("Enter a name for this polygon:");
+                            feature.properties.name = name || "Polygon " + (index + 1);
+                            featureNames[feature.id] = feature.properties.name;
+                        }} else {{
+                            feature.properties.name = featureNames[feature.id];
+                        }}
+                    }}
+
+                    // Assign color if not already assigned
+                    if (!featureColors[feature.id]) {{
+                        const polygonColor = prompt("Enter a color for this polygon (e.g., green, yellow):");
+                        featureColors[feature.id] = polygonColor || 'yellow';
+                    }}
+
+                    // Set the polygon's color
+                    map.addLayer({{
+                        id: 'polygon-' + feature.id,
+                        type: 'fill',
+                        source: {{
+                            type: 'geojson',
+                            data: feature
+                        }},
+                        paint: {{
+                            'fill-color': featureColors[feature.id],
+                            'fill-opacity': 0.6
+                        }}
+                    }});
+
+                    const bbox = turf.bbox(feature);
+                    const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
+                    const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
+
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat(feature.geometry.coordinates[0][0])
+                        .setHTML('<p>Polygon: ' + feature.properties.name + '<br>Width: ' + width.toFixed(2) + ' km, Height: ' + height.toFixed(2) + ' km</p>')
+                        .addTo(map);
+
+                    sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
+                    
+                    // Determine the unit based on width and height
+                    let widthUnit = width >= 1 ? 'km' : 'm';
+                    let heightUnit = height >= 1 ? 'km' : 'm';
+                    let widthValue = width >= 1 ? width.toFixed(2) : (width * 1000).toFixed(2);
+                    let heightValue = height >= 1 ? height.toFixed(2) : (height * 1000).toFixed(2);
+
                 }}
 
-                // Assign color if not already assigned (existing logic)
-                if (!featureColors[feature.id]) {{
-                    const polygonColor = prompt("Enter a color for this polygon (e.g., green, yellow):");
-                    featureColors[feature.id] = polygonColor || 'yellow';
+                // Update the color and position of the layer on updates
+                if (map.getLayer('line-' + feature.id)) {{
+                    map.getSource('line-' + feature.id).setData(feature);
+                }}
+                if (map.getLayer('polygon-' + feature.id)) {{
+                    map.getSource('polygon-' + feature.id).setData(feature);
+                }}
+                if (map.getLayer('marker-' + feature.id)) {{
+                    map.getSource('marker-' + feature.id).setData(feature);
                 }}
 
-                // Set the polygon's color (existing logic)
-                map.addLayer({{
-                    id: 'polygon-' + feature.id,
-                    type: 'fill',
-                    source: {{
-                        type: 'geojson',
-                        data: feature
-                    }},
-                    paint: {{
-                        'fill-color': featureColors[feature.id],
-                        'fill-opacity': 0.6
-                    }}
-                }});
-
-                const bbox = turf.bbox(feature);
-                const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);  // Width in kilometers
-                const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]); // Height in kilometers
-
-                // New: Adjust unit for width and height
-                let widthUnit = width >= 1 ? 'km' : 'm';
-                let heightUnit = height >= 1 ? 'km' : 'm';
-                let widthValue = width >= 1 ? width.toFixed(2) : (width * 1000).toFixed(2);
-                let heightValue = height >= 1 ? height.toFixed(2) : (height * 1000).toFixed(2);
-
-                const popup = new mapboxgl.Popup()
-                    .setLngLat(feature.geometry.coordinates[0][0])
-                    .setHTML('<p>Polygon: ' + feature.properties.name + '<br>Width: ' + widthValue + ' ' + widthUnit + ', Height: ' + heightValue + ' ' + heightUnit + '</p>')
-                    .addTo(map);
-
-                sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + widthValue + ' ' + widthUnit + ', Height = ' + heightValue + ' ' + heightUnit + '</p>';
-            }}
-
-            // Ensure updates to the color and position of the layer (existing logic)
-            if (map.getLayer('line-' + feature.id)) {{
-                map.getSource('line-' + feature.id).setData(feature);
-            }}
-            if (map.getLayer('polygon-' + feature.id)) {{
-                map.getSource('polygon-' + feature.id).setData(feature);
-            }}
-            if (map.getLayer('marker-' + feature.id)) {{
-                map.getSource('marker-' + feature.id).setData(feature);
-            }}
-
-        }});
-    }} else {{
-        sidebarContent = "<p>No features drawn yet.</p>";
+            }});
+        }} else {{
+            sidebarContent = "<p>No features drawn yet.</p>";
+        }}
+        window.parent.postMessage(sidebarContent, "*");
     }}
-    window.parent.postMessage(sidebarContent, "*");
-}}
-
 
     // Function to handle deletion of features
     function deleteFeature(e) {{
