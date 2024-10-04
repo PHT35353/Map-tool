@@ -241,7 +241,7 @@ mapbox_map_html = f"""
 
                     sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + widthValue + ' ' + widthUnit + ', Height = ' + heightValue + ' ' + heightUnit + '</p>';
                 }}
-            });
+            }});
         }} else {{
             sidebarContent = "<p>No features drawn yet.</p>";
         }}
