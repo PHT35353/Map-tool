@@ -177,6 +177,9 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = lineColor || 'blue';
                     }}
 
+                    // Update the feature's source when it's moved to ensure the color moves with it
+                    map.getSource('line-' + feature.id)?.setData(feature);
+
                     map.addLayer({{
                         id: 'line-' + feature.id,
                         type: 'line',
@@ -211,6 +214,9 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = polygonColor || 'yellow';
                     }}
 
+                    // Update the feature's source when it's moved to ensure the color moves with it
+                    map.getSource('polygon-' + feature.id)?.setData(feature);
+
                     map.addLayer({{
                         id: 'polygon-' + feature.id,
                         type: 'fill',
@@ -234,40 +240,8 @@ mapbox_map_html = f"""
                     let heightValue = height >= 1 ? height.toFixed(2) : (height * 1000).toFixed(2);
 
                     sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + widthValue + ' ' + widthUnit + ', Height = ' + heightValue + ' ' + heightUnit + '</p>';
-                }} else if (feature.geometry.type === 'Point') {{
-                    // Handle the naming and coloring for landmarks
-                    if (!featureNames[feature.id]) {{
-                        const name = prompt("Enter a name for this landmark:");
-                        feature.properties.name = name || "Landmark " + (landmarkCount + 1);
-                        featureNames[feature.id] = feature.properties.name;
-                        landmarks.push(feature);
-                        landmarkCount++;
-                    }} else {{
-                        feature.properties.name = featureNames[feature.id];
-                    }}
-
-                    if (!featureColors[feature.id]) {{
-                        const markerColor = prompt("Enter a color for this landmark (e.g., black, white):");
-                        featureColors[feature.id] = markerColor || 'black';
-                    }}
-
-                    // Set the marker's color and add it to the map
-                    map.addLayer({{
-                        id: 'marker-' + feature.id,
-                        type: 'circle',
-                        source: {{
-                            type: 'geojson',
-                            data: feature
-                        }},
-                        paint: {{
-                            'circle-radius': 8,
-                            'circle-color': featureColors[feature.id]
-                        }}
-                    }});
-
-                    sidebarContent += '<p>Landmark ' + feature.properties.name + '</p>';
                 }}
-            }});
+            });
         }} else {{
             sidebarContent = "<p>No features drawn yet.</p>";
         }}
@@ -318,8 +292,8 @@ if address_search:
                 st.sidebar.success(f"Address found: {geo_data['features'][0]['place_name']}")
                 st.sidebar.write(f"Coordinates: Latitude {latitude}, Longitude {longitude}")
             else:
-                st.sidebar.error("Address not found.");
+                st.sidebar.error("Address not found.")
         else:
-            st.sidebar.error("Error connecting to the Mapbox API.");
+            st.sidebar.error("Error connecting to the Mapbox API.")
     except Exception as e:
         st.sidebar.error(f"Error: {e}")
