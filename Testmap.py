@@ -250,9 +250,6 @@ mapbox_map_html = f"""
         }}
         map.resize(); // Ensure the map resizes correctly
     }}
-
-    // Make sidebar toggle available in fullscreen mode
-    map.addControl(new mapboxgl.FullscreenControl({container: document.querySelector('body')}));
 </script>
 </body>
 </html>
