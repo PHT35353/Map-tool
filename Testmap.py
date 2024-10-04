@@ -162,12 +162,12 @@ mapbox_map_html = f"""
                     let distanceValue = length >= 1 ? length.toFixed(2) : (length * 1000).toFixed(2);
 
                     // Show the line and its association with landmarks
-                    const popup = new mapboxgl.Popup()
-                        .setLngLat(startCoord)
-                        .setHTML('<p>Line belongs to: ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + length.toFixed(2) + ' km</p>')
-                        .addTo(map);
+                   const popup = new mapboxgl.Popup()
+                     .setLngLat(startCoord)
+                     .setHTML('<p>Line belongs to: ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + distanceValue + ' ' + distanceUnit + '</p>')
+                     .addTo(map);
+                   sidebarContent += '<p>Line ' + featureNames[feature.id] + ' belongs to ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + ': ' + distanceValue + ' ' + distanceUnit + '</p>';
 
-                    sidebarContent += '<p>Line ' + featureNames[feature.id] + ' belongs to ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + ': ' + length.toFixed(2) + ' km</p>';
                 }} else if (feature.geometry.type === 'Point') {{
                     if (!feature.properties.name) {{
                         if (!featureNames[feature.id]) {{
@@ -243,12 +243,13 @@ mapbox_map_html = f"""
                     let widthValue = width >= 1 ? width.toFixed(2) : (width * 1000).toFixed(2);
                     let heightValue = height >= 1 ? height.toFixed(2) : (height * 1000).toFixed(2);
 
-                    const popup = new mapboxgl.Popup()
-                        .setLngLat(feature.geometry.coordinates[0][0])
-                        .setHTML('<p>Polygon: ' + feature.properties.name + '<br>Width: ' + width.toFixed(2) + ' km, Height: ' + height.toFixed(2) + ' km</p>')
-                        .addTo(map);
+                   const popup = new mapboxgl.Popup()
+                     .setLngLat(feature.geometry.coordinates[0][0])
+                     .setHTML('<p>Polygon: ' + feature.properties.name + '<br>Width: ' + widthValue + ' ' + widthUnit + ', Height: ' + heightValue + ' ' + heightUnit + '</p>')
+                     .addTo(map);
 
-                    sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';  
+                   sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + widthValue + ' ' + widthUnit + ', Height = ' + heightValue + ' ' + heightUnit + '</p>';
+
                 }}
 
                 // Update the color and position of the layer on updates
