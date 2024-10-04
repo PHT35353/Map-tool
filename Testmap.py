@@ -162,12 +162,12 @@ mapbox_map_html = f"""
                     let distanceValue = length >= 1 ? length.toFixed(2) : (length * 1000).toFixed(2);
 
                     // Show the line and its association with landmarks
-                   const popup = new mapboxgl.Popup()
-                     .setLngLat(startCoord)
-                     .setHTML('<p>Line belongs to: ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + distanceValue + ' ' + distanceUnit + '</p>')
-                     .addTo(map);
-                   sidebarContent += '<p>Line ' + featureNames[feature.id] + ' belongs to ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + ': ' + distanceValue + ' ' + distanceUnit + '</p>';
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat(startCoord)
+                        .setHTML('<p>Line belongs to: ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + length.toFixed(2) + '</p>')
+                        .addTo(map);
 
+                    sidebarContent += '<p>Line ' + featureNames[feature.id] + ' belongs to ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + ': ' + length.toFixed(2) + '</p>';
                 }} else if (feature.geometry.type === 'Point') {{
                     if (!feature.properties.name) {{
                         if (!featureNames[feature.id]) {{
