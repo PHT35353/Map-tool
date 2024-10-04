@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import requests
 
 # Set up a title for the app
-st.title("Pipe tool")
+st.title("Piping tool")
 
 # Add instructions and explain color options
 st.markdown("""
