@@ -83,6 +83,10 @@ mapbox_map_html = f"""
             overflow: hidden;
         }}
         #toggleSidebar {{
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 2;
             background-color: #4CAF50;
             color: white;
             border: none;
@@ -101,12 +105,12 @@ mapbox_map_html = f"""
 </head>
 <body>
 <div id="sidebar" class="sidebar">
-    <button id="toggleSidebar" onclick="toggleSidebar()">Collapse</button>
     <div id="sidebarContent">
         <h3>Measurements</h3>
         <div id="measurements"></div>
     </div>
 </div>
+<button id="toggleSidebar" onclick="toggleSidebar()">Collapse</button>
 <div id="map"></div>
 <script>
     mapboxgl.accessToken = '{mapbox_access_token}';
@@ -240,8 +244,43 @@ mapbox_map_html = f"""
                     let heightValue = height >= 1 ? height.toFixed(2) : (height * 1000).toFixed(2);
 
                     sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + widthValue + ' ' + widthUnit + ', Height = ' + heightValue + ' ' + heightUnit + '</p>';
+                }} else if (feature.geometry.type === 'Point') {{
+                    // Handle landmarks (points)
+                    if (!feature.properties.name) {{
+                        if (!featureNames[feature.id]) {{
+                            const name = prompt("Enter a name for this landmark:");
+                            feature.properties.name = name || "Landmark " + (landmarkCount + 1);
+                            featureNames[feature.id] = feature.properties.name;
+                            landmarks.push(feature);
+                            landmarkCount++;
+                        }} else {{
+                            feature.properties.name = featureNames[feature.id];
+                        }}
+                    }}
+
+                    if (!featureColors[feature.id]) {{
+                        const markerColor = prompt("Enter a color for this landmark (e.g., black, white):");
+                        featureColors[feature.id] = markerColor || 'black';
+                    }}
+
+                    map.getSource('marker-' + feature.id)?.setData(feature);
+
+                    map.addLayer({{
+                        id: 'marker-' + feature.id,
+                        type: 'circle',
+                        source: {{
+                            type: 'geojson',
+                            data: feature
+                        }},
+                        paint: {{
+                            'circle-radius': 8,
+                            'circle-color': featureColors[feature.id]
+                        }}
+                    }});
+
+                    sidebarContent += '<p>Landmark ' + feature.properties.name + '</p>';
                 }}
-            }});
+            });
         }} else {{
             sidebarContent = "<p>No features drawn yet.</p>";
         }}
