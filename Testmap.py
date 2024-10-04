@@ -144,8 +144,8 @@ mapbox_map_html = f"""
 
     let landmarkCount = 0;
     let landmarks = [];
-    let featureColors = {};
-    let featureNames = {};
+    let featureColors = {{}};
+    let featureNames = {{}};
 
     // Handle drawn features (lines, shapes)
     map.on('draw.create', updateMeasurements);
