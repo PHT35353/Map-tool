@@ -94,7 +94,7 @@ mapbox_map_html = f"""
             max-height: 90%;
             overflow-y: auto;
         }}
-        h3 {
+        h3 {{
             margin-top: 0;
         }}
     </style>
