@@ -10,26 +10,16 @@ st.markdown("""
 This tool allows you to:
 1. Draw rectangles (polygons), lines, and markers (landmarks) on the map.
 2. Assign names and choose specific colors for each feature individually upon creation.
-3. Display distances for lines and dimensions for polygons both in the collapsible sidebar.
+3. Display distances for lines and dimensions for polygons both on the map and in the sidebar.
 4. Show relationships between landmarks and lines (e.g., a line belongs to two landmarks).
+
 **Available Colors**:
 - Named colors: red, blue, green, yellow, purple, cyan, pink, orange, black, white, gray
 - Hex colors: #FF0000 (red), #00FF00 (green), #0000FF (blue), #FFFF00 (yellow), #800080 (purple), #00FFFF (cyan), #FFC0CB (pink), #FFA500 (orange), #000000 (black), #FFFFFF (white), #808080 (gray)
 """)
 
-# Sidebar toggle button for opening and closing
-if "sidebar_open" not in st.session_state:
-    st.session_state.sidebar_open = True
-
-def toggle_sidebar():
-    st.session_state.sidebar_open = not st.session_state.sidebar_open
-
-# Button to toggle the sidebar
-st.sidebar.button("Toggle Sidebar", on_click=toggle_sidebar)
-
-# Sidebar for map controls and measurement display
-if st.session_state.sidebar_open:
-    st.sidebar.title("Map Controls & Measurements")
+# Sidebar to manage the map interactions
+st.sidebar.title("Map Controls")
 
 # Default location set to Amsterdam, Netherlands
 default_location = [52.3676, 4.9041]
@@ -72,6 +62,30 @@ mapbox_map_html = f"""
             bottom: 0;
             width: 100%;
         }}
+        #sidebar {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 300px;
+            height: 100%;
+            background-color: white;
+            border-right: 1px solid #ddd;
+            padding: 10px;
+            overflow-y: auto;
+            display: none; /* Collapsed by default */
+        }}
+        #sidebar.open {{
+            display: block;
+        }}
+        #toggleSidebar {{
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #007bff;
+            color: white;
+            padding: 5px;
+            cursor: pointer;
+        }}
         .mapboxgl-ctrl {{
             margin: 10px;
         }}
@@ -79,6 +93,8 @@ mapbox_map_html = f"""
 </head>
 <body>
 <div id="map"></div>
+<div id="sidebar"></div>
+<div id="toggleSidebar" onclick="toggleSidebar()">Show Measurements</div>
 <script>
     mapboxgl.accessToken = '{mapbox_access_token}';
 
@@ -87,8 +103,8 @@ mapbox_map_html = f"""
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
         center: [{longitude}, {latitude}],
         zoom: 13,
-        pitch: 45,
-        bearing: 0,
+        pitch: 45, // For 3D effect
+        bearing: 0, // Rotation angle
         antialias: true
     }});
 
@@ -125,6 +141,18 @@ mapbox_map_html = f"""
     map.on('draw.update', updateMeasurements);
     map.on('draw.delete', deleteFeature);
 
+    function toggleSidebar() {{
+        const sidebar = document.getElementById("sidebar");
+        const toggleButton = document.getElementById("toggleSidebar");
+        if (sidebar.classList.contains("open")) {{
+            sidebar.classList.remove("open");
+            toggleButton.innerHTML = "Show Measurements";
+        }} else {{
+            sidebar.classList.add("open");
+            toggleButton.innerHTML = "Hide Measurements";
+        }}
+    }}
+
     function updateMeasurements(e) {{
         const data = Draw.getAll();
         let sidebarContent = "";
@@ -132,12 +160,14 @@ mapbox_map_html = f"""
             const features = data.features;
             features.forEach(function(feature, index) {{
                 if (feature.geometry.type === 'LineString') {{
-                    const length = turf.length(feature, {{units: 'kilometers'}});
+                    let length = turf.length(feature) * 1000; // Convert to meters
+                    let unit = "m";
+                    if (length >= 1000) {{
+                        length /= 1000;
+                        unit = "km";
+                    }}
 
-                    // Convert distance to meters if it's less than 1 km
-                    const distance = length < 1 ? length * 1000 : length;
-                    const unit = length < 1 ? 'meters' : 'kilometers';
-
+                    // Only ask for name once
                     if (!featureNames[feature.id]) {{
                         const name = prompt("Enter a name for this line:");
                         featureNames[feature.id] = name || "Line " + (index + 1);
@@ -164,16 +194,22 @@ mapbox_map_html = f"""
                         }}
                     }});
 
-                    sidebarContent += '<p>Line ' + featureNames[feature.id] + ': ' + distance.toFixed(2) + ' ' + unit + '</p>';
+                    sidebarContent += `<p>Line {featureNames[feature.id]}: {length.toFixed(2)} {unit}</p>`;
                 }} else if (feature.geometry.type === 'Polygon') {{
                     const bbox = turf.bbox(feature);
-                    const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]], {{units: 'kilometers'}});
-                    const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]], {{units: 'kilometers'}});
+                    let width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]) * 1000; // Convert to meters
+                    let height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]) * 1000; // Convert to meters
+                    let widthUnit = "m";
+                    let heightUnit = "m";
 
-                    const widthValue = width < 1 ? width * 1000 : width;
-                    const heightValue = height < 1 ? height * 1000 : height;
-                    const widthUnit = width < 1 ? 'meters' : 'kilometers';
-                    const heightUnit = height < 1 ? 'meters' : 'kilometers';
+                    if (width >= 1000) {{
+                        width /= 1000;
+                        widthUnit = "km";
+                    }}
+                    if (height >= 1000) {{
+                        height /= 1000;
+                        heightUnit = "km";
+                    }}
 
                     if (!featureNames[feature.id]) {{
                         const name = prompt("Enter a name for this polygon:");
@@ -200,13 +236,13 @@ mapbox_map_html = f"""
                         }}
                     }});
 
-                    sidebarContent += '<p>Polygon ' + featureNames[feature.id] + ': Width = ' + widthValue.toFixed(2) + ' ' + widthUnit + ', Height = ' + heightValue.toFixed(2) + ' ' + heightUnit + '</p>';
+                    sidebarContent += `<p>Polygon {featureNames[feature.id]}: Width = {width.toFixed(2)} {widthUnit}, Height = {height.toFixed(2)} {heightUnit}</p>`;
                 }}
             }});
         }} else {{
             sidebarContent = "<p>No features drawn yet.</p>";
         }}
-        window.parent.postMessage(sidebarContent, "*");
+        document.getElementById("sidebar").innerHTML = sidebarContent;
     }}
 
     // Function to handle deletion of features
