@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import requests
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Collapsible Sidebar")
+st.title("Interactive Map Tool with Improved Measurement Display")
 
 # Sidebar to manage the map interactions
 st.sidebar.title("Map Controls")
@@ -31,7 +31,7 @@ mapbox_map_html = f"""
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Mapbox GL JS Drawing Tool with Collapsible Sidebar</title>
+    <title>Mapbox GL JS Drawing Tool with Sidebar</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v2.10.0/mapbox-gl.css" rel="stylesheet" />
@@ -47,7 +47,8 @@ mapbox_map_html = f"""
             position: absolute;
             top: 0;
             bottom: 0;
-            width: 100%; /* Full width when sidebar is hidden */
+            width: 80%; /* Make space for sidebar */
+            float: left;
         }}
         #sidebar {{
             position: absolute;
@@ -58,21 +59,6 @@ mapbox_map_html = f"""
             background-color: #f8f9fa;
             overflow-y: scroll;
             padding: 10px;
-            display: none; /* Initially hidden */
-        }}
-        #sidebar.visible {{
-            display: block;
-        }}
-        #toggle-sidebar {{
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 9999;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px;
-            cursor: pointer;
         }}
         .mapboxgl-ctrl {{
             margin: 10px;
@@ -81,7 +67,6 @@ mapbox_map_html = f"""
 </head>
 <body>
 <div id="map"></div>
-<button id="toggle-sidebar">Show Sidebar</button>
 <div id="sidebar">
     <h2>Map Measurements</h2>
     <div id="measurements">No features drawn yet.</div>
@@ -99,10 +84,15 @@ mapbox_map_html = f"""
         antialias: true
     }});
 
-    // Add map controls for zoom, rotation, fullscreen, and draw
+    // Add map controls for zoom, rotation, and fullscreen
     map.addControl(new mapboxgl.NavigationControl());
     map.addControl(new mapboxgl.FullscreenControl());
 
+    // Enable rotation and pitch adjustments using right-click
+    map.dragRotate.enable();
+    map.touchZoomRotate.enableRotation();
+
+    // Add the Draw control for drawing polygons, markers, lines, etc.
     const Draw = new MapboxDraw({{
         displayControlsDefault: false,
         controls: {{
@@ -112,24 +102,14 @@ mapbox_map_html = f"""
             trash: true
         }},
     }});
+
     map.addControl(Draw);
 
-    // Sidebar toggle button functionality
-    const sidebar = document.getElementById('sidebar');
-    const toggleButton = document.getElementById('toggle-sidebar');
-    let sidebarVisible = false;
+    let landmarks = [];
+    let featureNames = {{}};
+    let featureColors = {{}};
 
-    toggleButton.addEventListener('click', () => {{
-        sidebarVisible = !sidebarVisible;
-        if (sidebarVisible) {{
-            sidebar.classList.add('visible');
-            toggleButton.textContent = 'Hide Sidebar';
-        }} else {{
-            sidebar.classList.remove('visible');
-            toggleButton.textContent = 'Show Sidebar';
-        }}
-    }});
-
+    // Handle feature drawing events
     map.on('draw.create', updateMeasurements);
     map.on('draw.update', updateMeasurements);
     map.on('draw.delete', deleteFeature);
@@ -143,17 +123,81 @@ mapbox_map_html = f"""
                 if (feature.geometry.type === 'LineString') {{
                     const length = turf.length(feature);
                     const appropriateLength = formatDistance(length);
-                    sidebarContent += '<p>Line ' + (index + 1) + ': ' + appropriateLength + '</p>';
+
+                    if (!featureNames[feature.id]) {{
+                        const name = prompt("Enter a name for this line:");
+                        featureNames[feature.id] = name || "Line " + (index + 1);
+                    }}
+
+                    if (!featureColors[feature.id]) {{
+                        const lineColor = prompt("Enter a color for this line (e.g., red, purple, cyan, pink):");
+                        featureColors[feature.id] = lineColor || 'blue';
+                    }}
+
+                    // Display length in sidebar
+                    sidebarContent += '<p>' + featureNames[feature.id] + ': ' + appropriateLength + '</p>';
+
+                    // Add popup with measurements
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat(feature.geometry.coordinates[0])
+                        .setHTML('<p>' + featureNames[feature.id] + ': ' + appropriateLength + '</p>')
+                        .addTo(map);
+
+                    map.addLayer({{
+                        id: 'line-' + feature.id,
+                        type: 'line',
+                        source: {{
+                            type: 'geojson',
+                            data: feature
+                        }},
+                        layout: {{}},
+                        paint: {{
+                            'line-color': featureColors[feature.id],
+                            'line-width': 4
+                        }}
+                    }});
                 }} else if (feature.geometry.type === 'Polygon') {{
                     const bbox = turf.bbox(feature);
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
                     const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
                     const appropriateWidth = formatDistance(width);
                     const appropriateHeight = formatDistance(height);
-                    sidebarContent += '<p>Polygon ' + (index + 1) + ': Width = ' + appropriateWidth + ', Height = ' + appropriateHeight + '</p>';
+
+                    if (!featureNames[feature.id]) {{
+                        const name = prompt("Enter a name for this polygon:");
+                        featureNames[feature.id] = name || "Polygon " + (index + 1);
+                    }}
+
+                    if (!featureColors[feature.id]) {{
+                        const polygonColor = prompt("Enter a color for this polygon (e.g., green, yellow):");
+                        featureColors[feature.id] = polygonColor || 'yellow';
+                    }}
+
+                    // Display polygon dimensions in sidebar
+                    sidebarContent += '<p>' + featureNames[feature.id] + ': Width = ' + appropriateWidth + ', Height = ' + appropriateHeight + '</p>';
+
+                    // Add popup with measurements
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat(feature.geometry.coordinates[0][0])
+                        .setHTML('<p>' + featureNames[feature.id] + ': Width = ' + appropriateWidth + ', Height = ' + appropriateHeight + '</p>')
+                        .addTo(map);
+
+                    map.addLayer({{
+                        id: 'polygon-' + feature.id,
+                        type: 'fill',
+                        source: {{
+                            type: 'geojson',
+                            data: feature
+                        }},
+                        paint: {{
+                            'fill-color': featureColors[feature.id],
+                            'fill-opacity': 0.6
+                        }}
+                    }});
                 }}
             }});
 
+            // Update sidebar with measurements
             document.getElementById('measurements').innerHTML = sidebarContent;
         }} else {{
             document.getElementById('measurements').innerHTML = "No features drawn yet.";
@@ -169,6 +213,14 @@ mapbox_map_html = f"""
     }}
 
     function deleteFeature(e) {{
+        const features = e.features;
+        features.forEach(function(feature) {{
+            delete featureColors[feature.id];
+            delete featureNames[feature.id];
+
+            map.removeLayer('line-' + feature.id);
+            map.removeLayer('polygon-' + feature.id);
+        }});
         updateMeasurements();
     }}
 </script>
@@ -176,7 +228,7 @@ mapbox_map_html = f"""
 </html>
 """
 
-# Render the Mapbox 3D Satellite map with drawing functionality and collapsible sidebar
+# Render the Mapbox 3D Satellite map with drawing functionality and sidebar
 components.html(mapbox_map_html, height=600)
 
 # Address search using Mapbox Geocoding API
