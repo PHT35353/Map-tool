@@ -75,10 +75,12 @@ mapbox_map_html = f"""
             border-right: 1px solid #ccc;
             z-index: 1;
             padding: 10px;
-            display: block;
+            transition: all 0.3s ease;
         }}
         #sidebar.collapsed {{
-            display: none;
+            width: 0;
+            padding: 0;
+            overflow: hidden;
         }}
         #toggleSidebar {{
             background-color: #4CAF50;
@@ -92,7 +94,7 @@ mapbox_map_html = f"""
             max-height: 90%;
             overflow-y: auto;
         }}
-        h3 {{
+        h3 {
             margin-top: 0;
         }}
     </style>
@@ -142,10 +144,8 @@ mapbox_map_html = f"""
 
     let landmarkCount = 0;
     let landmarks = [];
-
-    // Store names and colors of polygons, lines, and markers once during creation
-    let featureColors = {{}};
-    let featureNames = {{}};
+    let featureColors = {};
+    let featureNames = {};
 
     // Handle drawn features (lines, shapes)
     map.on('draw.create', updateMeasurements);
@@ -160,10 +160,70 @@ mapbox_map_html = f"""
             features.forEach(function (feature, index) {{
                 if (feature.geometry.type === 'LineString') {{
                     const length = turf.length(feature);
+                    const startCoord = feature.geometry.coordinates[0];
+                    const endCoord = feature.geometry.coordinates[feature.geometry.coordinates.length - 1];
+
+                    // Identify landmarks for the start and end points of the line
+                    let startLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, startCoord) < 0.01);
+                    let endLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, endCoord) < 0.01);
+
+                    if (!featureNames[feature.id]) {{
+                        const name = prompt("Enter a name for this line:");
+                        featureNames[feature.id] = name || "Line " + (index + 1);
+        }}
+
+                    if (!featureColors[feature.id]) {{
+                        const lineColor = prompt("Enter a color for this line (e.g., red, purple, cyan, pink):");
+                        featureColors[feature.id] = lineColor || 'blue';
+        }}
+
+                    map.addLayer({{
+                        id: 'line-' + feature.id,
+                        type: 'line',
+                        source: {{
+                            type: 'geojson',
+                            data: feature
+        }},
+                        layout: {{}},
+                        paint: {{
+                            'line-color': featureColors[feature.id],
+                            'line-width': 4
+        }}
+        }});
+
                     let distanceUnit = length >= 1 ? 'km' : 'm';
                     let distanceValue = length >= 1 ? length.toFixed(2) : (length * 1000).toFixed(2);
-                    sidebarContent += '<p>Line ' + (index + 1) + ': ' + distanceValue + ' ' + distanceUnit + '</p>';
-                }} else if (feature.geometry.type === 'Polygon') {{
+
+                    sidebarContent += '<p>Line ' + featureNames[feature.id] + ' belongs to ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + ': ' + distanceValue + ' ' + distanceUnit + '</p>';
+        }} else if (feature.geometry.type === 'Polygon') {{
+                    if (!feature.properties.name) {{
+                        if (!featureNames[feature.id]) {{
+                            const name = prompt("Enter a name for this polygon:");
+                            feature.properties.name = name || "Polygon " + (index + 1);
+                            featureNames[feature.id] = feature.properties.name;
+        }} else {{
+                            feature.properties.name = featureNames[feature.id];
+        }}
+        }}
+
+                    if (!featureColors[feature.id]) {{
+                        const polygonColor = prompt("Enter a color for this polygon (e.g., green, yellow):");
+                        featureColors[feature.id] = polygonColor || 'yellow';
+        }}
+
+                    map.addLayer({{
+                        id: 'polygon-' + feature.id,
+                        type: 'fill',
+                        source: {{
+                            type: 'geojson',
+                            data: feature
+        }},
+                        paint: {{
+                            'fill-color': featureColors[feature.id],
+                            'fill-opacity': 0.6
+        }}
+        }});
+
                     const bbox = turf.bbox(feature);
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
                     const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
@@ -173,42 +233,41 @@ mapbox_map_html = f"""
                     let widthValue = width >= 1 ? width.toFixed(2) : (width * 1000).toFixed(2);
                     let heightValue = height >= 1 ? height.toFixed(2) : (height * 1000).toFixed(2);
 
-                    sidebarContent += '<p>Polygon ' + (index + 1) + ': Width = ' + widthValue + ' ' + widthUnit + ', Height = ' + heightValue + ' ' + heightUnit + '</p>';
-                }}
-            }});
+                    sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + widthValue + ' ' + widthUnit + ', Height = ' + heightValue + ' ' + heightUnit + '</p>';
+        }}
+        }});
         }} else {{
             sidebarContent = "<p>No features drawn yet.</p>";
             }}
         document.getElementById('measurements').innerHTML = sidebarContent;
-            }}
+        }}
 
     function toggleSidebar() {{
         var sidebar = document.getElementById('sidebar');
         if (sidebar.classList.contains('collapsed')) {{
             sidebar.classList.remove('collapsed');
-            }} else {{
+        }} else {{
             sidebar.classList.add('collapsed');
-            }}
+        }}
         }}
 
     // Function to handle deletion of features
     function deleteFeature(e) {{
         const features = e.features;
         features.forEach(function (feature) {{
-            // Remove feature colors and names on deletion
             delete featureColors[feature.id];
             delete featureNames[feature.id];
 
-            // Remove the layer corresponding to the deleted feature
             map.removeLayer('line-' + feature.id);
             map.removeLayer('polygon-' + feature.id);
             map.removeLayer('marker-' + feature.id);
-            }});
+        }});
         updateMeasurements();
-            }}
+        }}
 </script>
 </body>
 </html>
+
 
 """
 
