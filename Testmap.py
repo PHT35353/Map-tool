@@ -154,6 +154,7 @@ mapbox_map_html = f"""
                         }}
                     }});
 
+                    // Add measurements to sidebar content instead of on map
                     sidebarContent += '<p>Line ' + featureNames[feature.id] + ' (Start: ' + (startLandmark?.properties.name || 'Unknown') + ', End: ' + (endLandmark?.properties.name || 'Unknown') + '): ' + appropriateLength + '</p>';
                 }} else if (feature.geometry.type === 'Polygon') {{
                     const bbox = turf.bbox(feature);
@@ -190,6 +191,7 @@ mapbox_map_html = f"""
                         }}
                     }});
 
+                    // Add measurements to sidebar content instead of on map
                     sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + appropriateWidth + ', Height = ' + appropriateHeight + '</p>';
                 }}
 
@@ -204,12 +206,14 @@ mapbox_map_html = f"""
         }} else {{
             sidebarContent = "<p>No features drawn yet.</p>";
         }}
+
+        // Send the sidebar content to be displayed in Streamlit's sidebar
         window.parent.postMessage(sidebarContent, "*");
     }}
 
     function formatDistance(distance) {{
         if (distance < 1) {{
-            return (distance * 1000).toFixed(2) + ' meters';  // Convert to meters
+            return (distance * 1000).toFixed(2) + ' meters';  // Convert to meters for distances less than 1 km
         }} else {{
             return distance.toFixed(2) + ' km';
         }}
