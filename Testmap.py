@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import requests
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Sidebar and Color Fix")
+st.title("Interactive Map Tool with Sidebar and Original Color Behavior")
 
 # Sidebar to manage the map interactions
 st.sidebar.title("Map Controls")
@@ -47,6 +47,7 @@ mapbox_map_html = f"""
             position: absolute;
             top: 0;
             bottom: 0;
+            right: 0;
             width: 100%; /* Full width until sidebar is shown */
         }}
         #sidebar {{
@@ -54,7 +55,7 @@ mapbox_map_html = f"""
             position: absolute;
             top: 0;
             bottom: 0;
-            right: 0;
+            left: 0;
             width: 20%;
             background-color: #f8f9fa;
             overflow-y: scroll;
@@ -76,11 +77,11 @@ mapbox_map_html = f"""
     </style>
 </head>
 <body>
-<div id="map"></div>
 <div id="sidebar">
     <h2>Map Measurements</h2>
     <div id="measurements">No features drawn yet.</div>
 </div>
+<div id="map"></div>
 <div id="toggleSidebar" onclick="toggleSidebar()">Show Sidebar</div>
 <script>
     mapboxgl.accessToken = '{mapbox_access_token}';
@@ -145,11 +146,7 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = lineColor || 'blue';
                     }}
 
-                    // Apply color change correctly
-                    if (map.getLayer('line-' + feature.id)) {{
-                        map.removeLayer('line-' + feature.id);
-                    }}
-
+                    // Set the line's color without removing layers
                     map.addLayer({{
                         id: 'line-' + feature.id,
                         type: 'line',
@@ -183,11 +180,7 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = polygonColor || 'yellow';
                     }}
 
-                    // Apply color change correctly
-                    if (map.getLayer('polygon-' + feature.id)) {{
-                        map.removeLayer('polygon-' + feature.id);
-                    }}
-
+                    // Set the polygon's color without removing layers
                     map.addLayer({{
                         id: 'polygon-' + feature.id,
                         type: 'fill',
