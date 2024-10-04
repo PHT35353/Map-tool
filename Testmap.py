@@ -149,7 +149,7 @@ mapbox_map_html = f"""
                     source: {{
                         type: 'geojson',
                         data: feature
-                    },
+                    }},
                     layout: {{}},
                     paint: {{
                         'line-color': featureColors[feature.id],
