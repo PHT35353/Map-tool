@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import requests
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Individual Colors, Names, and Landmark Relations")
+st.title("Pipe tool")
 
 # Add instructions and explain color options
 st.markdown("""
