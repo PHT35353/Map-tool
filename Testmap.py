@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import requests
 
 # Set up a title for the app
-st.title("Interactive Map Tool with Improved Measurement Display")
+st.title("Interactive Map Tool with Sidebar and Color Fix")
 
 # Sidebar to manage the map interactions
 st.sidebar.title("Map Controls")
@@ -47,10 +47,10 @@ mapbox_map_html = f"""
             position: absolute;
             top: 0;
             bottom: 0;
-            width: 80%; /* Make space for sidebar */
-            float: left;
+            width: 100%; /* Full width until sidebar is shown */
         }}
         #sidebar {{
+            display: none;
             position: absolute;
             top: 0;
             bottom: 0;
@@ -63,6 +63,16 @@ mapbox_map_html = f"""
         .mapboxgl-ctrl {{
             margin: 10px;
         }}
+        #toggleSidebar {{
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+            z-index: 999;
+        }}
     </style>
 </head>
 <body>
@@ -71,6 +81,7 @@ mapbox_map_html = f"""
     <h2>Map Measurements</h2>
     <div id="measurements">No features drawn yet.</div>
 </div>
+<div id="toggleSidebar" onclick="toggleSidebar()">Show Sidebar</div>
 <script>
     mapboxgl.accessToken = '{mapbox_access_token}';
 
@@ -134,14 +145,10 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = lineColor || 'blue';
                     }}
 
-                    // Display length in sidebar
-                    sidebarContent += '<p>' + featureNames[feature.id] + ': ' + appropriateLength + '</p>';
-
-                    // Add popup with measurements
-                    const popup = new mapboxgl.Popup()
-                        .setLngLat(feature.geometry.coordinates[0])
-                        .setHTML('<p>' + featureNames[feature.id] + ': ' + appropriateLength + '</p>')
-                        .addTo(map);
+                    // Apply color change correctly
+                    if (map.getLayer('line-' + feature.id)) {{
+                        map.removeLayer('line-' + feature.id);
+                    }}
 
                     map.addLayer({{
                         id: 'line-' + feature.id,
@@ -156,6 +163,9 @@ mapbox_map_html = f"""
                             'line-width': 4
                         }}
                     }});
+
+                    sidebarContent += '<p>' + featureNames[feature.id] + ': ' + appropriateLength + '</p>';
+
                 }} else if (feature.geometry.type === 'Polygon') {{
                     const bbox = turf.bbox(feature);
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
@@ -173,14 +183,10 @@ mapbox_map_html = f"""
                         featureColors[feature.id] = polygonColor || 'yellow';
                     }}
 
-                    // Display polygon dimensions in sidebar
-                    sidebarContent += '<p>' + featureNames[feature.id] + ': Width = ' + appropriateWidth + ', Height = ' + appropriateHeight + '</p>';
-
-                    // Add popup with measurements
-                    const popup = new mapboxgl.Popup()
-                        .setLngLat(feature.geometry.coordinates[0][0])
-                        .setHTML('<p>' + featureNames[feature.id] + ': Width = ' + appropriateWidth + ', Height = ' + appropriateHeight + '</p>')
-                        .addTo(map);
+                    // Apply color change correctly
+                    if (map.getLayer('polygon-' + feature.id)) {{
+                        map.removeLayer('polygon-' + feature.id);
+                    }}
 
                     map.addLayer({{
                         id: 'polygon-' + feature.id,
@@ -194,10 +200,11 @@ mapbox_map_html = f"""
                             'fill-opacity': 0.6
                         }}
                     }});
+
+                    sidebarContent += '<p>' + featureNames[feature.id] + ': Width = ' + appropriateWidth + ', Height = ' + appropriateHeight + '</p>';
                 }}
             }});
 
-            // Update sidebar with measurements
             document.getElementById('measurements').innerHTML = sidebarContent;
         }} else {{
             document.getElementById('measurements').innerHTML = "No features drawn yet.";
@@ -218,17 +225,40 @@ mapbox_map_html = f"""
             delete featureColors[feature.id];
             delete featureNames[feature.id];
 
-            map.removeLayer('line-' + feature.id);
-            map.removeLayer('polygon-' + feature.id);
+            if (map.getLayer('line-' + feature.id)) {{
+                map.removeLayer('line-' + feature.id);
+            }}
+            if (map.getLayer('polygon-' + feature.id)) {{
+                map.removeLayer('polygon-' + feature.id);
+            }}
         }});
         updateMeasurements();
     }}
+
+    // Sidebar toggle logic
+    function toggleSidebar() {{
+        const sidebar = document.getElementById('sidebar');
+        const toggleButton = document.getElementById('toggleSidebar');
+        if (sidebar.style.display === 'none') {{
+            sidebar.style.display = 'block';
+            map.getCanvas().style.width = '80%'; // Adjust map size when sidebar is visible
+            toggleButton.innerText = 'Hide Sidebar';
+        }} else {{
+            sidebar.style.display = 'none';
+            map.getCanvas().style.width = '100%'; // Expand map when sidebar is hidden
+            toggleButton.innerText = 'Show Sidebar';
+        }}
+        map.resize(); // Ensure the map resizes correctly
+    }}
+
+    // Make sidebar toggle available in fullscreen mode
+    map.addControl(new mapboxgl.FullscreenControl({container: document.querySelector('body')}));
 </script>
 </body>
 </html>
 """
 
-# Render the Mapbox 3D Satellite map with drawing functionality and sidebar
+# Render the Mapbox 3D Satellite map with drawing functionality and collapsible sidebar
 components.html(mapbox_map_html, height=600)
 
 # Address search using Mapbox Geocoding API
