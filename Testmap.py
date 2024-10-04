@@ -181,14 +181,17 @@ mapbox_map_html = f"""
           }}
           document.getElementById('measurements').innerHTML = sidebarContent;
       }}
+   
              function toggleSidebar() {{
-                var sidebar = document.getElementById('sidebar');
-                if (sidebar.classList.contains('collapsed')) {{
+                 var sidebar = document.getElementById('sidebar');
+                 if (sidebar.classList.contains('collapsed')) {{
                  sidebar.classList.remove('collapsed');
-                  }} else {{
+        }} else {{
             sidebar.classList.add('collapsed');
-          }}
-      }}
+        }}
+    }}
+
+            
                     // Identify landmarks for the start and end points of the line
                     let startLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, startCoord) < 0.01);
                     let endLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, endCoord) < 0.01);
@@ -331,6 +334,7 @@ mapbox_map_html = f"""
             sidebarContent = "<p>No features drawn yet.</p>";
         }}
         window.parent.postMessage(sidebarContent, "*");
+        
     }}
 
     // Function to handle deletion of features
