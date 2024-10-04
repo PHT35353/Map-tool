@@ -129,10 +129,6 @@ mapbox_map_html = f"""
                     // Identify landmarks for the start and end points of the line
                     let startLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, startCoord) < 0.01);
                     let endLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, endCoord) < 0.01);
-                    
-                    // Determine the unit based on length
-                    let distanceUnit = length >= 1 ? 'km' : 'm';
-                    let distanceValue = length >= 1 ? length.toFixed(2) : (length * 1000).toFixed(2);
 
                     // Only ask for name once
                     if (!featureNames[feature.id]) {{
@@ -160,6 +156,10 @@ mapbox_map_html = f"""
                             'line-width': 4
                         }}
                     }});
+
+                    // Determine the unit based on length
+                    let distanceUnit = length >= 1 ? 'km' : 'm';
+                    let distanceValue = length >= 1 ? length.toFixed(2) : (length * 1000).toFixed(2);
 
                     // Show the line and its association with landmarks
                     const popup = new mapboxgl.Popup()
@@ -237,19 +237,18 @@ mapbox_map_html = f"""
                     const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
                     const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
 
-                    const popup = new mapboxgl.Popup()
-                        .setLngLat(feature.geometry.coordinates[0][0])
-                        .setHTML('<p>Polygon: ' + feature.properties.name + '<br>Width: ' + width.toFixed(2) + ' km, Height: ' + height.toFixed(2) + ' km</p>')
-                        .addTo(map);
-
-                    sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';
-                    
-                    // Determine the unit based on width and height
+                     // Determine the unit based on width and height
                     let widthUnit = width >= 1 ? 'km' : 'm';
                     let heightUnit = height >= 1 ? 'km' : 'm';
                     let widthValue = width >= 1 ? width.toFixed(2) : (width * 1000).toFixed(2);
                     let heightValue = height >= 1 ? height.toFixed(2) : (height * 1000).toFixed(2);
 
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat(feature.geometry.coordinates[0][0])
+                        .setHTML('<p>Polygon: ' + feature.properties.name + '<br>Width: ' + width.toFixed(2) + ' km, Height: ' + height.toFixed(2) + ' km</p>')
+                        .addTo(map);
+
+                    sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + width.toFixed(2) + ' km, Height = ' + height.toFixed(2) + ' km</p>';  
                 }}
 
                 // Update the color and position of the layer on updates
