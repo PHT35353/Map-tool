@@ -62,30 +62,6 @@ mapbox_map_html = f"""
             bottom: 0;
             width: 100%;
         }}
-        #sidebar {{
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 300px;
-            height: 100%;
-            background-color: white;
-            border-right: 1px solid #ddd;
-            padding: 10px;
-            overflow-y: auto;
-            display: none; /* Collapsed by default */
-        }}
-        #sidebar.open {{
-            display: block;
-        }}
-        #toggleSidebar {{
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: #007bff;
-            color: white;
-            padding: 5px;
-            cursor: pointer;
-        }}
         .mapboxgl-ctrl {{
             margin: 10px;
         }}
@@ -93,8 +69,6 @@ mapbox_map_html = f"""
 </head>
 <body>
 <div id="map"></div>
-<div id="sidebar"></div>
-<div id="toggleSidebar" onclick="toggleSidebar()">Show Measurements</div>
 <script>
     mapboxgl.accessToken = '{mapbox_access_token}';
 
@@ -141,18 +115,6 @@ mapbox_map_html = f"""
     map.on('draw.update', updateMeasurements);
     map.on('draw.delete', deleteFeature);
 
-    function toggleSidebar() {{
-        const sidebar = document.getElementById("sidebar");
-        const toggleButton = document.getElementById("toggleSidebar");
-        if (sidebar.classList.contains("open")) {{
-            sidebar.classList.remove("open");
-            toggleButton.innerHTML = "Show Measurements";
-        }} else {{
-            sidebar.classList.add("open");
-            toggleButton.innerHTML = "Hide Measurements";
-        }}
-    }}
-
     function updateMeasurements(e) {{
         const data = Draw.getAll();
         let sidebarContent = "";
@@ -160,12 +122,13 @@ mapbox_map_html = f"""
             const features = data.features;
             features.forEach(function(feature, index) {{
                 if (feature.geometry.type === 'LineString') {{
-                    let length = turf.length(feature) * 1000; // Convert to meters
-                    let unit = "m";
-                    if (length >= 1000) {{
-                        length /= 1000;
-                        unit = "km";
-                    }}
+                    const length = turf.length(feature);
+                    const startCoord = feature.geometry.coordinates[0];
+                    const endCoord = feature.geometry.coordinates[feature.geometry.coordinates.length - 1];
+
+                    // Identify landmarks for the start and end points of the line
+                    let startLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, startCoord) < 0.01);
+                    let endLandmark = landmarks.find(lm => turf.distance(lm.geometry.coordinates, endCoord) < 0.01);
 
                     // Only ask for name once
                     if (!featureNames[feature.id]) {{
@@ -194,26 +157,26 @@ mapbox_map_html = f"""
                         }}
                     }});
 
-                    sidebarContent += `<p>Line ${featureNames[feature.id]}: ${length.toFixed(2)} ${unit}</p>`;
+                    // Determine the unit based on length
+                    let distanceUnit = length >= 1 ? 'km' : 'm';
+                    let distanceValue = length >= 1 ? length.toFixed(2) : (length * 1000).toFixed(2);
+
+                    // Show the line and its association with landmarks
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat(startCoord)
+                        .setHTML('<p>Line belongs to: ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + '<br>Length: ' + distanceValue + ' ' + distanceUnit + '</p>')
+                        .addTo(map);
+
+                    sidebarContent += '<p>Line ' + featureNames[feature.id] + ' belongs to ' + (startLandmark?.properties.name || 'Unknown') + ' - ' + (endLandmark?.properties.name || 'Unknown') + ': ' + distanceValue + ' ' + distanceUnit + '</p>';
                 }} else if (feature.geometry.type === 'Polygon') {{
-                    const bbox = turf.bbox(feature);
-                    let width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]) * 1000; // Convert to meters
-                    let height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]) * 1000; // Convert to meters
-                    let widthUnit = "m";
-                    let heightUnit = "m";
-
-                    if (width >= 1000) {{
-                        width /= 1000;
-                        widthUnit = "km";
-                    }}
-                    if (height >= 1000) {{
-                        height /= 1000;
-                        heightUnit = "km";
-                    }}
-
-                    if (!featureNames[feature.id]) {{
-                        const name = prompt("Enter a name for this polygon:");
-                        featureNames[feature.id] = name || "Polygon " + (index + 1);
+                    if (!feature.properties.name) {{
+                        if (!featureNames[feature.id]) {{
+                            const name = prompt("Enter a name for this polygon:");
+                            feature.properties.name = name || "Polygon " + (index + 1);
+                            featureNames[feature.id] = feature.properties.name;
+                        }} else {{
+                            feature.properties.name = featureNames[feature.id];
+                        }}
                     }}
 
                     // Assign color if not already assigned
@@ -236,13 +199,40 @@ mapbox_map_html = f"""
                         }}
                     }});
 
-                    sidebarContent += `<p>Polygon ${featureNames[feature.id]}: Width = ${width.toFixed(2)} ${widthUnit}, Height = ${height.toFixed(2)} ${heightUnit}</p>`;
+                    const bbox = turf.bbox(feature);
+                    const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
+                    const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
+
+                    // Determine the unit based on width and height
+                    let widthUnit = width >= 1 ? 'km' : 'm';
+                    let heightUnit = height >= 1 ? 'km' : 'm';
+                    let widthValue = width >= 1 ? width.toFixed(2) : (width * 1000).toFixed(2);
+                    let heightValue = height >= 1 ? height.toFixed(2) : (height * 1000).toFixed(2);
+
+                    const popup = new mapboxgl.Popup()
+                        .setLngLat(feature.geometry.coordinates[0][0])
+                        .setHTML('<p>Polygon: ' + feature.properties.name + '<br>Width: ' + widthValue + ' ' + widthUnit + ', Height: ' + heightValue + ' ' + heightUnit + '</p>')
+                        .addTo(map);
+
+                    sidebarContent += '<p>Polygon ' + feature.properties.name + ': Width = ' + widthValue + ' ' + widthUnit + ', Height = ' + heightValue + ' ' + heightUnit + '</p>';
                 }}
+
+                // Update the color and position of the layer on updates
+                if (map.getLayer('line-' + feature.id)) {{
+                    map.getSource('line-' + feature.id).setData(feature);
+                }}
+                if (map.getLayer('polygon-' + feature.id)) {{
+                    map.getSource('polygon-' + feature.id).setData(feature);
+                }}
+                if (map.getLayer('marker-' + feature.id)) {{
+                    map.getSource('marker-' + feature.id).setData(feature);
+                }}
+
             }});
         }} else {{
             sidebarContent = "<p>No features drawn yet.</p>";
         }}
-        document.getElementById("sidebar").innerHTML = sidebarContent;
+        window.parent.postMessage(sidebarContent, "*");
     }}
 
     // Function to handle deletion of features
